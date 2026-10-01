@@ -1,8 +1,8 @@
 # Faculty attendance register application design
 
-Prepared on 1 October 2026 for review. The conversational design has been approved; this document specifies the application to be built. It is not a claim that the application or print template has been implemented or tested.
+Approved by the user on 1 October 2026. This document specifies the application to be built. It is not a claim that the application or print template has been implemented or tested.
 
-The agreed scope below records the user's decisions. Detailed operational rules and technical choices in later sections are proposed implementation defaults for review with this specification.
+The agreed scope below records the user's decisions. Detailed operational rules and technical choices in later sections are the implementation defaults accepted with this specification.
 
 The application will replace manual preparation of the supplied attendance booklet. Faculty will paste or enter their lesson plans, students, timetables and marks, record absences, and generate an editable Word document containing replacement interior sheets. One Windows PC will host the application and its saved data. Faculty will access it through browsers on the college network using individual logins.
 
@@ -231,7 +231,7 @@ Use the database backup API rather than copying a live database file blindly. Va
 
 ## Verification and acceptance
 
-Use synthetic students and marks for development and demonstrations. Keep reference photographs local. Verification must establish the following observable outcomes:
+Use synthetic students and marks for development and demonstrations. The original register photographs are included in the teaching repository at the user's request as layout references; do not turn their handwritten student information into application seed data. Verification must establish the following observable outcomes:
 
 | Scenario | Required result |
 | --- | --- |
