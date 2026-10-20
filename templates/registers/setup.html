@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block title %}{% if register %}{{ register.subject_code }} Settings · Faculty Register{% else %}New Register · Faculty Register{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'register-list' %}" style="color: inherit; text-decoration: none;">Registers</a>
+<span class="breadcrumb-separator">/</span>
+<span>{% if register %}{{ register.subject_code }} (Sec {{ register.section }}){% else %}Create Register{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'register-list' %}" aria-label="Back to registers">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 18 9 12 15 6"></polyline>
+  </svg>
+  <span>Back to My Registers</span>
+</a>
+
+{% if register %}
+<div class="workspace-quick-banner">
+  <div class="banner-info">
+    <div class="banner-badge">{{ register.subject_code }} · SECTION {{ register.section }}</div>
+    <div>
+      <h3 class="banner-title">{{ register.subject_name }}</h3>
+      <p class="banner-desc">{{ register.department }} · Semester {{ register.semester }} · Academic Year {{ register.academic_year }}</p>
+    </div>
+  </div>
+  <a class="button primary banner-cta" href="{% url 'register-workspace' register.pk 'students' %}">
+    <span>Open Register Workspace</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+      <polyline points="12 5 19 12 12 19"></polyline>
+    </svg>
+  </a>
+</div>
+{% endif %}
+
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">COURSE CONFIGURATION</p>
+    <h1>{% if register %}Register Settings{% else %}Create a Register{% endif %}<span class="title-dot">.</span></h1>
+    <p class="muted">Subject identification, term dates, and section attributes.</p>
+  </div>
+  {% if register %}
+  <div class="header-badges">
+    {% if register.archived_at %}
+    <span class="badge badge-warning">Archived</span>
+    {% else %}
+    <span class="badge badge-success">Active</span>
+    <span class="badge">Revision {{ register.revision }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if conflict %}
+<section class="notice error" role="alert">
+  <div class="notice-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  </div>
+  <div class="notice-body">
+    <h3>Your changes were not saved due to a concurrency conflict</h3>
+    <p>Another session updated this register. Your attempted values are preserved in the form below so you can compare them before saving.</p>
+    <details class="conflict-details" style="margin-top: 8px;">
+      <summary style="font-weight: 600; cursor: pointer;">View the latest saved values</summary>
+      <dl style="margin-top: 8px; display: grid; grid-template-columns: 140px 1fr; gap: 6px; font-size: 13px;">
+        {% for key,value in conflict.current.items %}
+        <dt style="font-weight: 600; color: var(--text-secondary);">{{ key }}:</dt>
+        <dd style="margin: 0;">{{ value|default_if_none:'—' }}</dd>
+        {% endfor %}
+      </dl>
+    </details>
+    <div style="margin-top: 12px;">
+      <a href="" class="button secondary small">Reload the latest version</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<div class="editor-layout">
+  <section class="panel">
+    <div class="panel-heading">
+      <h2>Register Information</h2>
+      <p class="muted">Fields marked with an asterisk (<span class="required">*</span>) are mandatory.</p>
+    </div>
+    <form method="post" data-dirty-warning>
+      {% csrf_token %}
+      {% include 'includes/form_fields.html' %}
+      <div class="form-actions">
+        {% if not register.archived_at %}
+        <button class="button primary" type="submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          <span>{% if register %}Save changes{% else %}Create register{% endif %}</span>
+        </button>
+        {% endif %}
+        <a class="button secondary" href="{% url 'register-list' %}">Cancel & return</a>
+        <span class="form-status" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+  </section>
+
+  <aside class="context-panel">
+    <div class="context-card-header">
+      <div class="context-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <div>
+        <h4>Course Scope</h4>
+        <span class="context-sub">One register per class</span>
+      </div>
+    </div>
+    <p>Use a separate register for each subject, section, and laboratory division. Term dates should encompass all teaching days.</p>
+
+    <div class="context-divider"></div>
+
+    <div class="context-card-header">
+      <div class="context-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <div>
+        <h4>Private & Isolated</h4>
+        <span class="context-sub">Faculty data privacy</span>
+      </div>
+    </div>
+    <p>Only your faculty account has access to view or modify this register. Records are cryptographically protected.</p>
+
+    {% if register %}
+    <div class="context-divider"></div>
+    <div class="context-action-box">
+      <h4>{% if register.archived_at %}Restore course{% else %}Course concluded?{% endif %}</h4>
+      <p>{% if register.archived_at %}Return this register to your active dashboard.{% else %}Archiving preserves all student marks, attendance, and audit history.{% endif %}</p>
+      <a class="archive-action-link" href="{% url 'register-archive' register.pk %}" aria-label="{% if register.archived_at %}Restore register{% else %}Archive register{% endif %}">
+        {% if register.archived_at %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+        </svg>
+        <span>Restore to active registers →</span>
+        {% else %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="21 8 21 21 3 21 3 8"></polyline>
+          <rect x="1" y="3" width="22" height="5"></rect>
+          <line x1="10" y1="12" x2="14" y2="12"></line>
+        </svg>
+        <span>Archive this register →</span>
+        {% endif %}
+      </a>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

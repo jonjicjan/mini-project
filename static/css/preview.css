@@ -1,0 +1,493 @@
+/* ========================================================
+   BOOKLET PRINT PREVIEW STYLES
+   ======================================================== */
+
+.preview-toolbar-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #f7f9f6;
+  border: 1px solid #d4dfd4;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.preview-filter-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #233c34;
+}
+
+.preview-filter-form input,
+.preview-filter-form select {
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1px solid #c2cdc2;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-nav-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e1e9e0;
+}
+
+.pills-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #647567;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+.pill-btn {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #e9efe7;
+  color: #244e40;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.pill-btn:hover {
+  background: #244e40;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Booklet Viewport & Sheets */
+.booklet-viewport {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 60px;
+  background: #eef2ed;
+  border-radius: 14px;
+}
+
+.booklet-pages-stream {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  max-width: 1100px;
+}
+
+.booklet-sheet {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  padding: 24px 28px;
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  box-sizing: border-box;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+/* Dimensions reflecting 210mm vs 105mm at standard screen DPI */
+.booklet-sheet.full-page {
+  width: 100%;
+  max-width: 960px;
+  min-height: 1200px;
+}
+
+.booklet-sheet.half-leaf {
+  width: 100%;
+  max-width: 580px;
+  min-height: 1200px;
+  border-left: 4px dashed #7a9c78;
+}
+
+.sheet-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #6a7c6b;
+  background: #f1f6ef;
+  border: 1px solid #d4dfd4;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 18px;
+}
+
+.sheet-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 1120px;
+}
+
+/* Institution Header */
+.institution-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+}
+
+.institution-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.institution-logo-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.institution-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+
+.half-leaf .institution-brand-lockup {
+  gap: 8px;
+}
+
+.half-leaf .institution-logo {
+  width: 26px;
+  height: 26px;
+}
+
+.institution-details {
+  text-align: center;
+}
+
+.inst-line1 {
+  font-size: 8.5px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.inst-line2 {
+  font-size: 10px;
+  font-weight: bold;
+  margin: 1px 0 0;
+  line-height: 1.25;
+}
+
+.inst-line3 {
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin: 1px 0 0;
+  line-height: 1.25;
+}
+
+.inst-line4 {
+  font-size: 8px;
+  font-style: italic;
+  margin: 1px 0 0;
+  line-height: 1.25;
+}
+
+/* Meta Band */
+.meta-band {
+  background: #fafafa;
+  border: 1px solid #000;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.meta-band.compact {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.band-title {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.band-details {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.meta-band.compact .band-details {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.badge-block {
+  font-weight: bold;
+  background: #000;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+/* Tables */
+.booklet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: #000;
+  border: 1px solid #000;
+}
+
+.booklet-table th,
+.booklet-table td {
+  border: 1px solid #000;
+  padding: 4px 5px;
+  vertical-align: middle;
+}
+
+.booklet-table th {
+  background: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+  font-size: 10px;
+}
+
+.lesson-table tbody td {
+  font-size: 11px;
+  height: 28px;
+}
+
+.attendance-table {
+  font-size: 10px;
+}
+
+.attendance-table th {
+  padding: 3px 2px;
+}
+
+.attendance-table td {
+  padding: 3px 2px;
+  height: 24px;
+}
+
+.session-col-hdr {
+  width: 22px;
+  min-width: 22px;
+  text-align: center;
+  font-size: 9px;
+}
+
+.date-cell {
+  line-height: 1.1;
+  font-size: 8px;
+}
+
+.usn-cell {
+  font-weight: 600;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.name-cell {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.att-cell {
+  text-align: center;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.absence-mark {
+  color: #d32f2f !important;
+  font-weight: 900 !important;
+}
+
+.assess-hdr {
+  font-size: 8px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.assess-title {
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.assess-max {
+  font-size: 8px;
+  color: #555;
+  margin-top: 2px;
+}
+
+.assess-val-cell {
+  text-align: center;
+  font-weight: 600;
+  font-size: 9px;
+}
+
+.totals-row td {
+  font-weight: bold;
+  font-size: 9px;
+  background: #fbfbfb;
+}
+
+.totals-label {
+  font-weight: bold;
+  font-size: 9px;
+}
+
+/* Signatures */
+.signatures-band {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 30px;
+  font-size: 11px;
+  font-weight: bold;
+  border-top: 1px solid #ccc;
+}
+
+.leaf-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.timetable-meta-footer {
+  margin-top: 15px;
+  padding: 8px 10px;
+  border: 1px solid #000;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.sheet-footer {
+  margin-top: 18px;
+  padding-top: 8px;
+  border-top: 1px dotted #ccc;
+  font-size: 9px;
+  color: #666;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* ========================================================
+   PRINT SPECIFIC STYLES (@media print)
+   ======================================================== */
+@media print {
+  body {
+    background: #ffffff !important;
+    margin: 0 !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .register-tabs,
+  .page-heading,
+  .back-link,
+  .preview-toolbar-container,
+  .sheet-badge,
+  .notice {
+    display: none !important;
+  }
+
+  .workspace {
+    margin: 0 !important;
+  }
+
+  .content {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .booklet-viewport {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  .booklet-pages-stream {
+    gap: 0 !important;
+    max-width: none !important;
+  }
+
+  .booklet-sheet {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: auto !important;
+  }
+
+  .booklet-sheet.half-leaf {
+    border-left: none !important;
+  }
+
+  .booklet-table {
+    border-color: #000 !important;
+  }
+
+  .booklet-table th,
+  .booklet-table td {
+    border-color: #000 !important;
+  }
+
+  .absence-mark {
+    color: #d32f2f !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

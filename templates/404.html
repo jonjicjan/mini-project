@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Page Not Found · Faculty Register{% endblock %}
+
+{% block content %}
+<section class="dialog-panel error-page-panel">
+  <div class="dialog-icon icon-primary">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  </div>
+  <p class="eyebrow">404 NOT FOUND</p>
+  <h1>Resource or Page Not Found</h1>
+  <p class="dialog-explanation">The requested URL or course register could not be located. It may have been archived, relocated, or you might have entered an incorrect link.</p>
+  <div class="form-actions" style="justify-content: center; margin-top: 24px;">
+    <a href="{% url 'register-list' %}" class="button primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <span>Return to My Registers</span>
+    </a>
+  </div>
+</section>
+{% endblock %}

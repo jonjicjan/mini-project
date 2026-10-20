@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sign in · Faculty Register{% endblock %}
+
+{% block content %}
+<div class="login-layout">
+  <section class="login-story">
+    <div class="brand" style="padding: 0; margin-bottom: 40px;">
+      <div class="brand-mark" style="background: #ffffff; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.4);">
+        <img src="{% static 'img/ksit_logo.jpg' %}" alt="KSIT Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px;">
+      </div>
+      <div class="brand-text">
+        <span class="brand-sub" style="color: #a7e2cb;">K S INSTITUTE OF TECHNOLOGY</span>
+        <strong class="brand-title" style="color: #ffffff;">Faculty Register</strong>
+      </div>
+    </div>
+
+    <div>
+      <p class="eyebrow" style="color: #a7e2cb;">LESS MANUAL WORK. VERIFIED RECORDS.</p>
+      <h1>A precision space<br>for every course.</h1>
+      <p style="font-size: 14px; line-height: 1.6; max-width: 380px;">
+        Maintain course rosters, timetable slots, running attendance, and internal assessments with certified physical booklet printing.
+      </p>
+
+      <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #d6f4e8;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
+          <span>Automatic running attendance counts & red absence marks</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
+          <span>Cumulative Internal Tests & continuous evaluation</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
+          <span>Authentic 210×307 mm Word booklet & in-browser preview</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.5); font-weight: 700; margin-top: 40px;">
+      PRODUCTION GRADE · WAL STORAGE
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <p class="eyebrow">WELCOME BACK</p>
+    <h2>Sign in to your workspace</h2>
+    <p class="muted" style="margin-bottom: 28px;">Use the credentials provided by your institution.</p>
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 18px;">
+      {% csrf_token %}
+      {% include 'includes/form_fields.html' %}
+      <button class="button primary full" type="submit" style="height: 46px; font-size: 14px; margin-top: 10px;">
+        <span>Sign in to account</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </form>
+
+    <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border-light); font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+      <p style="margin: 0;">Need an account or password reset?<br>Contact your institutional administrator.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

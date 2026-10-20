@@ -1,0 +1,603 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} · {{ register.subject_code }} (Sec {{ register.section }}) · Faculty Register{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'register-list' %}" style="color: inherit; text-decoration: none;">Registers</a>
+<span class="breadcrumb-separator">/</span>
+<a href="{% url 'register-setup' register.pk %}" style="color: inherit; text-decoration: none;">{{ register.subject_code }} (Sec {{ register.section }})</a>
+<span class="breadcrumb-separator">/</span>
+<span>{{ title }}</span>
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/workspace.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/preview.css' %}?v=3.2">
+
+<a class="back-link" href="{% url 'register-setup' register.pk %}">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  <span>Course Settings & Details</span>
+</a>
+
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ register.department }} · SEMESTER {{ register.semester }} · SECTION {{ register.section }}</p>
+    <h1>{{ title }}<span class="title-dot">.</span></h1>
+    <p class="muted">{{ register.subject_code }} · {{ register.subject_name }} · Academic Year {{ register.academic_year }}</p>
+  </div>
+  <div class="header-badges">
+    {% if register.archived_at %}
+    <span class="badge badge-warning">Archived</span>
+    {% else %}
+    <span class="badge badge-success">Active Course</span>
+    <span class="badge">Revision {{ register.revision }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<nav class="register-tabs" aria-label="Register sections">
+  {% for key,label in tabs %}
+  <a href="{% url 'register-workspace' register.pk key %}" {% if key == tab %}aria-current="page"{% endif %}>
+    {% if key == 'students' %}<span class="tab-emoji">👥</span>
+    {% elif key == 'lessons' %}<span class="tab-emoji">📚</span>
+    {% elif key == 'timetable' %}<span class="tab-emoji">⏰</span>
+    {% elif key == 'sessions' %}<span class="tab-emoji">📅</span>
+    {% elif key == 'attendance' %}<span class="tab-emoji">📝</span>
+    {% elif key == 'rules' %}<span class="tab-emoji">⚙️</span>
+    {% elif key == 'marks' %}<span class="tab-emoji">📊</span>
+    {% elif key == 'exports' %}<span class="tab-emoji">📥</span>
+    {% elif key == 'preview' %}<span class="tab-emoji">👁️</span>
+    {% endif %}
+    <span>{{ label }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+{% if register.archived_at %}
+<div class="notice">
+  <div class="notice-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+  </div>
+  <div class="notice-body">This register is currently archived in read-only mode. Restore it from Register Settings to make changes.</div>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="notice error" role="alert">
+  <div class="notice-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+  </div>
+  <div class="notice-body">
+    <strong>{{ error }}</strong>
+    {% for field,details in error_details.items %}<p>{{ field }}: {{ details }}</p>{% endfor %}
+    <p>Your change was not applied. For a revision conflict, copy your attempted values and reload the latest version before retrying.</p>
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'students' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Student Roster & Eligibility:</strong> Enter enrolled students by University Seat Number (USN) and full student name. USN acts as the primary key during bulk Excel imports. Updating names or correcting USNs preserves existing attendance. Set eligibility dates for lateral transfers or dropouts.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'lessons' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Syllabus & Lesson Plan:</strong> Record topic titles manually or paste syllabus modules directly from Word/Excel. Original planned dates remain intact. Recording an executed date generates a class session ready for attendance marking.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'timetable' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Weekly Timetable Schedule:</strong> Define weekly recurring teaching slots (Day of week, Period, start/end time, and effective validity dates). When timetable shifts occur mid-term, expire the old slot and introduce the updated timing.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'sessions' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Conducted Classes & Tests:</strong> Log classes and Internal Assessment Tests 1–3 manually or automatically populate schedule slots from the weekly timetable. Multi-hour tests count as single consolidated events.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'rules' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Assessment Calculation Formula:</strong> Define component weightages for Tests, Assignments, and Quizzes totaling 100%. Missing scores remain pending; AB (Absent) contributes 0. Best-N scaling handles varied maximum marks seamlessly.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'marks' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Continuous Internal Evaluation (CIE) Marks:</strong> Enter numerical scores, <code>AB</code> for excused/unexcused absence, or <code>CLEAR</code> to reset. Blank entries preserve previously saved values.
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'exports' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Official Booklet Generation:</strong> Generate immutable point-in-time snapshots of the attendance register. Word documents are created according to strict physical booklet specifications (210×307mm full sheets, 105×307mm half-width leaves, 20 students per block).
+  </div>
+</div>
+{% endif %}
+
+{% if tab == 'preview' %}
+<div class="tab-intro-card">
+  <div class="intro-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+  </div>
+  <div class="intro-text">
+    <strong>Official Booklet Print Preview:</strong> Inspect full booklet sheets, half-width continuation leaves, absence markers, assessment totals, and timetable inserts before printing. Use <strong>Print / Save to PDF</strong> to print directly or <strong>Download Word</strong> for physical binding.
+  </div>
+</div>
+{% endif %}
+
+{% if rows is not None and headings %}
+<section class="panel record-list">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          {% for heading in headings %}
+          <th scope="col">{{ heading }}</th>
+          {% endfor %}
+          <th scope="col" style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for id,values in rows %}
+        <tr>
+          {% for value in values %}
+          <td>{{ value|default_if_none:'—' }}</td>
+          {% endfor %}
+          <td style="text-align: right;">
+            {% if id and not register.archived_at %}
+            <a href="?edit={{ id }}#entry" class="action-btn-link">Edit</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{{ headings|length|add:1 }}" class="muted" style="text-align: center; padding: 28px;">No records yet. Add the first entry below.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if tab == 'sessions' and not register.archived_at %}
+<section class="panel spaced">
+  <div class="panel-heading">
+    <h2>Schedule Lessons from Timetable</h2>
+    <p class="muted">Automatically populate remaining planned syllabus topics into your weekly slots.</p>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    {{ operation.as_p }}
+    <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px;">
+      <div style="flex: 1; min-width: 200px;">
+        <label for="effective_from" style="font-weight: 700; font-size: 13px; display: block; margin-bottom: 6px;">Place outstanding lessons from date:</label>
+        <input id="effective_from" name="effective_from" type="date" value="{{ today|date:'Y-m-d' }}" required>
+      </div>
+      <button class="button secondary" name="action" value="schedule_preview" type="submit">Preview Schedule</button>
+    </div>
+  </form>
+
+  {% if schedule_preview %}
+  <div class="schedule-preview-box" style="margin-top: 20px; padding: 18px; background: var(--surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+    <h3 style="margin-bottom: 6px;">Proposed Lesson Placement</h3>
+    <p class="muted" style="font-size: 13px;">{{ schedule_preview.moves|length }} session placements · {{ schedule_preview.unplaced|length }} topics without an available slot. Historical and fixed classes stay in place.</p>
+    <ul style="font-size: 13px; margin: 12px 0; padding-left: 20px; line-height: 1.6;">
+      {% for move in schedule_preview.moves %}
+      <li><code>{{ move.date }}</code> · Period {{ move.period }} · {{ move.start }}–{{ move.end }}</li>
+      {% endfor %}
+    </ul>
+    <form method="post" style="margin-top: 12px;">
+      {% csrf_token %}
+      <input type="hidden" name="schedule_token" value="{{ schedule_token }}">
+      <button class="button primary" name="action" value="schedule_apply" type="submit">Confirm & Apply Schedule</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if tab == 'attendance' %}
+{% include 'registers/attendance_history.html' %}
+
+<section class="panel spaced">
+  <div class="panel-heading">
+    <h2>Record Class Attendance</h2>
+    <p class="muted">Select a teaching period to record or update attendance marks.</p>
+  </div>
+  <form method="get" class="session-selector-form" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 240px;">
+      <label for="session-picker" style="display: block; font-weight: 700; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary);">Select Class / Test Session:</label>
+      <select id="session-picker" name="session">
+        {% for session in sessions %}
+        <option value="{{ session.pk }}" {% if session.pk == selected.pk %}selected{% endif %}>
+          {{ session }} · {{ session.status }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="button secondary" style="margin-top: 18px;">Open Attendance</button>
+  </form>
+</section>
+
+{% if selected %}
+<section class="panel spaced">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h2>{{ selected }}</h2>
+      <p class="muted">Mark individual absences, then save or complete class. Completing marks all remaining unmarked students as present.</p>
+    </div>
+    <span class="badge badge-success">{{ selected.status|upper }}</span>
+  </div>
+
+  <form method="post" data-dirty-warning>
+    {% csrf_token %}
+    {{ operation.as_p }}
+    <input type="hidden" name="session_id" value="{{ selected.pk }}">
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Student / USN</th>
+            <th scope="col">Attendance Status</th>
+            <th scope="col">Attended / Eligible</th>
+            <th scope="col">Running Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student,mark,summary in attendance_rows %}
+          <tr>
+            <th scope="row">
+              <div class="user-badge">
+                <span class="user-avatar-sm">{{ student.name|first|upper }}</span>
+                <div>
+                  <strong>{{ student.name }}</strong>
+                  <br><code class="code-pill">{{ student.usn }}</code>
+                </div>
+              </div>
+            </th>
+            <td>
+              <select name="cell_{{ student.pk }}" aria-label="Attendance for {{ student.usn }}" class="attendance-select {% if mark == 'absent' %}select-absent{% elif mark == 'present' %}select-present{% endif %}">
+                {% if mark == 'not_applicable' %}
+                <option value="not_applicable">Not applicable</option>
+                {% else %}
+                <option value="unmarked" {% if mark == 'unmarked' %}selected{% endif %}>⚪ Unmarked</option>
+                <option value="present" {% if mark == 'present' %}selected{% endif %}>🟢 Present</option>
+                <option value="absent" {% if mark == 'absent' %}selected{% endif %}>🔴 Absent</option>
+                {% endif %}
+              </select>
+            </td>
+            <td><strong style="font-family: var(--font-mono);">{{ summary.attended }}</strong> / {{ summary.eligible }}</td>
+            <td>
+              <span class="percentage-pill {% if summary.percentage < 75 %}percentage-low{% elif summary.percentage >= 85 %}percentage-high{% endif %}">
+                {{ summary.percentage|floatformat:1|default:'—' }}{% if summary.percentage != None %}%{% endif %}
+              </span>
+              {% if summary.provisional %}
+              <small class="muted" style="margin-left: 4px;">(Provisional)</small>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="muted" style="text-align: center; padding: 24px;">Enroll students under the Students tab before marking attendance.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if not register.archived_at %}
+    <div class="form-actions">
+      <button class="button secondary" name="action" value="save_attendance" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <span>Save Attendance</span>
+      </button>
+      <button class="button primary" name="action" value="complete" type="submit" aria-label="Complete class">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Complete Class (Mark Present)</span>
+      </button>
+    </div>
+    {% endif %}
+  </form>
+</section>
+{% else %}
+<div class="notice">
+  <div class="notice-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+  <div class="notice-body">Add classes under <strong>Classes & tests</strong> before recording attendance.</div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if conflicts %}
+<section class="panel spaced">
+  <div class="panel-heading">
+    <h2>Holiday Conflicts to Review</h2>
+    <p class="muted">The following scheduled sessions overlap with declared college holidays.</p>
+  </div>
+  {% for conflict in conflicts %}
+  <form method="post" class="conflict-row" style="background: var(--surface-subtle); padding: 18px; border-radius: var(--radius-md); margin-bottom: 12px; border: 1px solid var(--border-light);">
+    {% csrf_token %}
+    {{ operation.as_p }}
+    <input type="hidden" name="conflict_id" value="{{ conflict.pk }}">
+    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+      <span class="badge badge-warning">Conflict Detected</span>
+      <strong>{{ conflict.session }}</strong> · {{ conflict.holiday.reason }}
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+      <div>
+        <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Conflict Resolution:</label>
+        <select name="resolution">
+          <option value="keep_actual">Keep this class as an exception</option>
+          <option value="cancel">Cancel class and preserve history</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Reason for Decision:</label>
+        <input name="reason" maxlength="500" placeholder="e.g., Special extra class authorized" required>
+      </div>
+    </div>
+    <button class="button secondary small" name="action" value="resolve" type="submit">Resolve Conflict</button>
+  </form>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if tab == 'preview' %}
+{% include 'registers/preview_content.html' %}
+{% endif %}
+
+{% if exports and tab != 'preview' %}
+<section class="panel spaced">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h2>Issued Word Booklets</h2>
+      <p class="muted">Generated Point-in-Time official register archives.</p>
+    </div>
+    <span class="badge">{{ exports|length }} Issued</span>
+  </div>
+
+  <div class="issued-docs-grid" style="display: grid; gap: 14px;">
+    {% for export in exports %}
+    <div class="issued-doc-card">
+      <div class="doc-icon-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </div>
+      <div class="doc-details" style="flex: 1;">
+        <div class="doc-header-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <a href="{% url 'export-download' export.pk %}" class="doc-title-link" style="font-weight: 700; color: var(--emerald-800); text-decoration: none;">
+            Register Booklet · {{ export.created_at|date:'d M Y H:i' }}
+          </a>
+          <span class="badge">Revision {{ export.source_revision }}</span>
+          {% if export.snapshot.draft %}
+          <span class="badge badge-warning">Draft</span>
+          {% else %}
+          <span class="badge badge-success">Final Certified</span>
+          {% endif %}
+        </div>
+        <div class="doc-meta-row" style="margin-top: 6px;">
+          {% if export.snapshot.warnings %}
+          <details class="warnings-details" style="font-size: 12px; color: var(--warning-text);">
+            <summary style="cursor: pointer; font-weight: 600;">Review {{ export.snapshot.warnings|length }} booklet fit warnings</summary>
+            <ul style="margin: 4px 0 0 16px; padding: 0;">
+              {% for warning in export.snapshot.warnings %}
+              <li>{{ warning }}</li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% else %}
+          <span class="verified-fit-tag" style="font-size: 12px; color: var(--success); font-weight: 600;">✓ 0 booklet fit warnings · Certified physical layout</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="doc-actions" style="display: flex; gap: 8px;">
+        <a href="{% url 'export-preview' export.pk %}" class="button secondary small">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span>Preview Booklet</span>
+        </a>
+        <a href="{% url 'export-download' export.pk %}" class="button primary small" aria-label="Download Word document">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Download .docx</span>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if form and not register.archived_at %}
+<section id="entry" class="panel spaced">
+  <div class="panel-heading">
+    <h2>{% if request.GET.edit %}Edit Entry{% elif tab == 'rules' %}Configure Assessment Rules{% elif tab == 'exports' %}Generate Word Document Booklet{% else %}Manual Entry{% endif %}</h2>
+    <p class="muted">Fill in the fields below and save to update this register.</p>
+  </div>
+  <form method="post" data-dirty-warning>
+    {% csrf_token %}
+    {% include 'includes/form_fields.html' %}
+    <div class="form-actions">
+      <button class="button primary" name="action" value="save" type="submit" aria-label="{% if tab == 'exports' %}Generate Word document{% else %}Save{% endif %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <span>{% if tab == 'exports' %}Generate Word Document{% else %}Save Entry{% endif %}</span>
+      </button>
+      {% if request.GET.edit %}
+      <a href="{% url 'register-workspace' register.pk tab %}" class="button secondary">Cancel Edit</a>
+      {% endif %}
+      <span class="form-status" role="status" aria-live="polite"></span>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+{% if paste_form and not register.archived_at %}
+<section class="panel spaced">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h2>Paste Multiple Rows (Excel / Word)</h2>
+      <p class="muted">Copy a table directly from Excel or Word and paste it below. Columns are matched automatically to field labels. Preview first before applying.</p>
+    </div>
+    <span class="badge badge-subtle">Batch Import</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for hidden in paste_form.hidden_fields %}
+      {{ hidden }}
+    {% endfor %}
+
+    <div class="field" style="margin-bottom: 16px;">
+      <label for="{{ paste_form.text.id_for_label }}" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-weight: 700; font-size: 13px; color: var(--text-primary);">{{ paste_form.text.label }} <span class="required" style="color: var(--danger);">*</span></span>
+        <span class="badge badge-subtle">Tab-Delimited or CSV</span>
+      </label>
+      {{ paste_form.text }}
+      {% if paste_form.text.help_text %}
+        <small class="help" style="display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px;">{{ paste_form.text.help_text }}</small>
+      {% endif %}
+      {% if paste_form.text.errors %}
+        <div class="field-error" style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ paste_form.text.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div class="field">
+        <label for="{{ paste_form.delimiter.id_for_label }}" style="display: block; font-weight: 700; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary);">
+          {{ paste_form.delimiter.label }} <span class="required" style="color: var(--danger);">*</span>
+        </label>
+        {{ paste_form.delimiter }}
+        {% if paste_form.delimiter.errors %}
+          <div class="field-error" style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ paste_form.delimiter.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="{{ paste_form.columns.id_for_label }}" style="display: block; font-weight: 700; font-size: 12px; margin-bottom: 6px; color: var(--text-secondary);">
+          {{ paste_form.columns.label }} <span class="required" style="color: var(--danger);">*</span>
+        </label>
+        {{ paste_form.columns }}
+        {% if paste_form.columns.help_text %}
+          <small class="help" style="display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px;">{{ paste_form.columns.help_text }}</small>
+        {% endif %}
+        {% if paste_form.columns.errors %}
+          <div class="field-error" style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ paste_form.columns.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <button class="button secondary" name="action" value="preview" type="submit" style="margin-top: 8px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span>Preview Pasted Rows</span>
+    </button>
+  </form>
+
+  {% if preview %}
+  <div class="preview-results-box" style="margin-top: 24px; padding: 22px; background: var(--surface-subtle); border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <h3 style="margin: 0; font-size: 16px;">Pasted Rows Preview</h3>
+        <p class="muted" style="margin: 4px 0 0; font-size: 12px;">Verify parsed columns and row labels before committing to the register.</p>
+      </div>
+      <span class="badge badge-success">{{ preview.rows|length }} Valid Rows Parsed</span>
+    </div>
+
+    {% for error in preview.errors %}
+    <div class="notice error" style="margin-bottom: 12px;">
+      <div class="notice-icon">⚠️</div>
+      <div class="notice-body"><strong>Row {{ error.row }}, Column {{ error.column }}:</strong> {{ error.message }}</div>
+    </div>
+    {% endfor %}
+
+    {% if preview.rows %}
+    <div class="table-scroll" style="margin: 16px 0;">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" style="width: 90px; text-align: center;">Row Label</th>
+            {% for key, val in preview.rows.0.items %}
+            <th scope="col">
+              <span class="preview-chip" style="margin: 0; font-size: 11px;">{{ key|upper }}</span>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview.rows %}
+          <tr>
+            <th scope="row" style="text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--emerald-800); background: var(--emerald-50);">
+              Row {{ forloop.counter }}
+            </th>
+            {% for key,value in row.items %}
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="preview-chip-label" style="font-size: 10px; font-weight: 700; color: var(--emerald-700); text-transform: uppercase; font-family: var(--font-mono); letter-spacing: 0.04em;">{{ key }}</span>
+                <strong style="font-size: 13px;">{{ value|default_if_none:'—' }}</strong>
+              </div>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if preview_token %}
+    <form method="post" style="margin-top: 16px;">
+      {% csrf_token %}
+      <input type="hidden" name="preview_token" value="{{ preview_token }}">
+      <button class="button primary" name="action" value="apply_paste" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Apply {{ preview.rows|length }} Rows to Register</span>
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,309 @@
+{% load static %}
+<div class="preview-toolbar-container">
+  <div class="preview-toolbar">
+    <div class="toolbar-left">
+      <form method="get" class="preview-filter-form">
+        <label for="preview-through" class="toolbar-label">Preview through date:</label>
+        <input type="date" id="preview-through" name="through" value="{{ preview_through|date:'Y-m-d' }}" onchange="this.form.submit()">
+        {% if exports %}
+        <label for="export-picker" class="toolbar-label" style="margin-left: 12px;">Or view issued export:</label>
+        <select id="export-picker" name="export" onchange="this.form.submit()">
+          <option value="">-- Live Register Preview --</option>
+          {% for exp in exports %}
+          <option value="{{ exp.pk }}" {% if selected_export_id == exp.pk|stringformat:'s' %}selected{% endif %}>
+            {{ exp.created_at|date:'d M Y H:i' }} · Rev {{ exp.source_revision }} {% if exp.snapshot.draft %}(Draft){% else %}(Final){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        {% endif %}
+      </form>
+    </div>
+    <div class="toolbar-right">
+      <button type="button" class="button secondary" onclick="window.print()">
+        <span style="font-size: 16px;">🖨️</span> Print / Save to PDF
+      </button>
+      {% if active_download_url %}
+      <a href="{{ active_download_url }}" class="button primary">
+        <span>📥</span> Download Word (.docx)
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="preview-nav-pills">
+    <span class="pills-label">Jump to:</span>
+    <a href="#page-1" class="pill-btn">Lesson Plan</a>
+    <a href="#page-4" class="pill-btn">Block 1 Roster (Sl. 1–20)</a>
+    <a href="#page-5" class="pill-btn">Block 1 Continuation Leaves</a>
+    <a href="#page-10" class="pill-btn">Block 1 Marks Summary</a>
+    {% if preview_data.total_pages > 11 %}
+    <a href="#page-11" class="pill-btn">Block 2 Roster (Sl. 21–25)</a>
+    <a href="#page-18" class="pill-btn">Block 2 Marks Summary</a>
+    {% endif %}
+    <a href="#page-{{ preview_data.total_pages }}" class="pill-btn">Faculty Timetable</a>
+  </div>
+</div>
+
+{% if preview_data.warnings %}
+<div class="notice" style="background: #fff8e6; border-color: #f0c36d; color: #7a5400; margin: 15px 0;">
+  <strong>Review {{ preview_data.warnings|length }} Fit & Calculation Notices:</strong>
+  <ul style="margin: 6px 0 0 18px; padding: 0;">
+    {% for w in preview_data.warnings %}
+    <li>{{ w }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<div class="notice" style="background: #eef7ed; border-color: #b7e1b5; color: #1e561f; margin: 15px 0;">
+  <strong>✓ 100% Ready for Final Printing</strong> — Zero fit warnings. All rows, columns, and leaf boundaries conform to the physical booklet specifications.
+</div>
+{% endif %}
+
+<div class="booklet-viewport">
+  <div class="booklet-pages-stream">
+    {% for page in preview_data.pages %}
+      <div id="page-{{ page.page_number }}" class="booklet-sheet {% if page.is_half %}half-leaf{% else %}full-page{% endif %}">
+        <div class="sheet-badge">
+          <span>PAGE {{ page.page_number }} OF {{ preview_data.total_pages }}</span>
+          <span>•</span>
+          <span>{% if page.is_half %}HALF LEAF (105 × 307 mm){% else %}FULL SHEET (210 × 307 mm){% endif %}</span>
+          <span>•</span>
+          <span style="text-transform: uppercase;">{{ page.type }}</span>
+        </div>
+
+        <div class="sheet-inner">
+          <!-- INSTITUTION HEADING -->
+          <div class="institution-header">
+            <div class="institution-brand-lockup">
+              <div class="institution-logo-wrap">
+                <img src="{% static 'img/ksit_logo.jpg' %}" alt="KSIT Logo" class="institution-logo">
+              </div>
+              <div class="institution-details">
+                {% if page.is_half %}
+                <p class="inst-line2">K S GROUP OF INSTITUTIONS</p>
+                <p class="inst-line3">K. S. INSTITUTE OF TECHNOLOGY</p>
+                {% else %}
+                <p class="inst-line1">KAMMAVARI SANGHAM (R) - 1952</p>
+                <p class="inst-line2">K S GROUP OF INSTITUTIONS</p>
+                <p class="inst-line3">K. S. INSTITUTE OF TECHNOLOGY</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if page.type == 'lesson' %}
+            <!-- LESSON PLAN PAGE -->
+            <div class="meta-band">
+              <div class="band-title">LESSON PLAN AND EXECUTION</div>
+              {% if page.is_first %}
+              <div class="band-details">
+                <div>Branch: <strong>{{ preview_data.register.branch }}</strong> &nbsp;|&nbsp; Sem: <strong>{{ preview_data.register.semester }}</strong> &nbsp;|&nbsp; Sec: <strong>{{ preview_data.register.section }}</strong></div>
+                <div>Subject: <strong>{{ preview_data.register.subject_name }}</strong> ({{ preview_data.register.subject_code }})</div>
+                <div>Faculty: <strong>{{ preview_data.register.faculty_name }}</strong></div>
+              </div>
+              {% endif %}
+            </div>
+
+            <table class="booklet-table lesson-table">
+              <thead>
+                <tr>
+                  <th style="width: 8%;">Class No.</th>
+                  <th style="width: 52%; text-align: left;">Topics</th>
+                  <th style="width: 12%;">Date Plan</th>
+                  <th style="width: 12%;">Date Execution</th>
+                  <th style="width: 16%; text-align: left;">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in page.rows %}
+                <tr>
+                  <td style="text-align: center; font-weight: bold;">{{ row.number }}</td>
+                  <td style="text-align: left;">{{ row.topic }}</td>
+                  <td style="text-align: center;">{{ row.planned_date }}</td>
+                  <td style="text-align: center;">{{ row.execution_date }}</td>
+                  <td style="text-align: left;">{{ row.remarks }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            {% if page.is_last %}
+            <div class="signatures-band">
+              <div>Signature of Faculty</div>
+              <div>Signature of HOD</div>
+              <div>Signature of Principal</div>
+            </div>
+            {% endif %}
+
+          {% elif page.type == 'attendance' %}
+            <!-- ATTENDANCE / ASSESSMENT SHEET -->
+            <div class="meta-band compact">
+              <div class="band-details">
+                <span>{{ preview_data.register.academic_year }} &nbsp;|&nbsp; Sem {{ preview_data.register.semester }} ({{ preview_data.register.section }}) &nbsp;|&nbsp; {{ preview_data.register.branch }}</span>
+                <span>{{ preview_data.register.subject_code }} · {{ preview_data.register.subject_name }}</span>
+                <span class="badge-block">Students {{ page.student_start }} to {{ page.student_end }}</span>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="booklet-table attendance-table">
+                <thead>
+                  <!-- Header row 1: Session Numbers -->
+                  <tr class="header-nums">
+                    {% if page.kind == 'roster' %}
+                    <th rowspan="3" style="width: 32px;">Sl.<br>No.</th>
+                    <th rowspan="3" style="width: 85px;">USN</th>
+                    <th rowspan="3" style="width: 140px; text-align: left;">Name of the Student</th>
+                    {% endif %}
+                    {% for s in page.sessions %}
+                    <th class="session-col-hdr">{{ forloop.counter|add:page.session_start|add:'-1' }}</th>
+                    {% endfor %}
+                    {% if page.kind == 'assessment' %}
+                      {% for label, max_val in page.assessment_headers %}
+                      <th class="assess-hdr" rowspan="3">
+                        <div class="assess-title">{{ label }}</div>
+                        {% if max_val %}<div class="assess-max">{{ max_val }}</div>{% endif %}
+                      </th>
+                      {% endfor %}
+                    {% endif %}
+                  </tr>
+
+                  <!-- Header row 2: Periods -->
+                  <tr class="header-periods">
+                    {% for s in page.sessions %}
+                    <th class="session-col-hdr">{{ s.period }}</th>
+                    {% endfor %}
+                  </tr>
+
+                  <!-- Header row 3: Dates -->
+                  <tr class="header-dates">
+                    {% for s in page.sessions %}
+                    <th class="session-col-hdr date-cell">
+                      {% if s.date %}
+                      <span>{{ s.date|slice:'8:10' }}</span><br><span>{{ s.date|slice:'5:7' }}</span>
+                      {% endif %}
+                    </th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for srow in page.student_rows %}
+                  <tr>
+                    {% if page.kind == 'roster' %}
+                    <td style="text-align: center; font-weight: 600;">{{ srow.serial }}</td>
+                    <td class="usn-cell">{{ srow.usn }}</td>
+                    <td class="name-cell">{{ srow.name }}</td>
+                    {% endif %}
+
+                    {% for c in srow.cells %}
+                    <td class="att-cell {% if c == 'A' %}absence-mark{% endif %}">{{ c }}</td>
+                    {% endfor %}
+
+                    {% if page.kind == 'assessment' %}
+                      {% for val in srow.assessments %}
+                      <td class="assess-val-cell {% if val == 'AB' %}absence-mark{% endif %}">{{ val }}</td>
+                      {% endfor %}
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+
+                  <!-- Column Totals -->
+                  <tr class="totals-row">
+                    {% if page.kind == 'roster' %}
+                    <td colspan="3" class="totals-label">No. of Students Absent</td>
+                    {% endif %}
+                    {% for a in page.col_absent %}
+                    <td class="att-cell">{{ a }}</td>
+                    {% endfor %}
+                    {% if page.kind == 'assessment' %}
+                    <td colspan="{{ page.assessment_headers|length }}" style="background: #fafafa;"></td>
+                    {% endif %}
+                  </tr>
+
+                  <tr class="totals-row">
+                    {% if page.kind == 'roster' %}
+                    <td colspan="3" class="totals-label">No. of Students Present</td>
+                    {% endif %}
+                    {% for p in page.col_present %}
+                    <td class="att-cell">{{ p }}</td>
+                    {% endfor %}
+                    {% if page.kind == 'assessment' %}
+                    <td colspan="{{ page.assessment_headers|length }}" style="background: #fafafa;"></td>
+                    {% endif %}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="leaf-footer">
+              <div class="initials-cell">Faculty initials</div>
+              <div class="sig-cell">
+                {% if page.is_half %}
+                Signature of HOD
+                {% else %}
+                Signature of Faculty &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Signature of HOD
+                {% endif %}
+              </div>
+            </div>
+
+          {% elif page.type == 'timetable' %}
+            <!-- FACULTY TIMETABLE INSERT -->
+            <div class="meta-band">
+              <div class="band-title">FACULTY TIMETABLE</div>
+              <div class="band-details">
+                <div>Faculty: <strong>{{ preview_data.register.faculty_name }}</strong></div>
+                <div>Effective from: <strong>{{ page.effective_from }}</strong></div>
+              </div>
+            </div>
+
+            <table class="booklet-table timetable-table">
+              <thead>
+                <tr>
+                  <th style="width: 12%;">Day / Time</th>
+                  {% for slot in page.slots %}
+                  <th style="text-align: center;">
+                    <div style="font-weight: bold;">{{ slot.label }}</div>
+                    <div style="font-size: 10px; color: #555;">{{ slot.start }}–{{ slot.end }}</div>
+                  </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for drow in page.day_rows %}
+                <tr>
+                  <td style="font-weight: bold; background: #f9fbf8;">{{ drow.day|slice:':3'|upper }}</td>
+                  {% for cell in drow.cells %}
+                  <td style="text-align: center; vertical-align: middle; font-size: 11px;">
+                    {{ cell|default:'—' }}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <div class="timetable-meta-footer">
+              <div>Subject: <strong>{{ preview_data.register.subject_name }}</strong> ({{ preview_data.register.subject_code }})</div>
+              <div>Branch: <strong>{{ preview_data.register.branch }}</strong> &nbsp;|&nbsp; Sem: <strong>{{ preview_data.register.semester }} / {{ preview_data.register.section }}</strong></div>
+            </div>
+
+            <div class="signatures-band" style="margin-top: 25px;">
+              <div>Signature of Faculty</div>
+              <div>Signature of HOD</div>
+              <div>Signature of Principal</div>
+            </div>
+          {% endif %}
+
+          <div class="sheet-footer">
+            <span>Faculty Attendance Register</span>
+            <span>•</span>
+            <span>Export Through: {{ preview_data.export_date }}</span>
+            <span>•</span>
+            <span>Revision {{ preview_data.source_revision }} {% if preview_data.draft %}(DRAFT){% else %}(FINAL){% endif %}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,49 @@
+{% if grid_sessions %}
+<section class="panel spaced">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h2>Cumulative Attendance Matrix</h2>
+      <p class="muted">Sequential class counter across sessions. Red <strong>A</strong> denotes recorded absence. Click any date column header to edit.</p>
+    </div>
+    <span class="badge">{{ grid_sessions|length }} Sessions Tracked</span>
+  </div>
+
+  <div class="table-scroll">
+    <table class="attendance-matrix-table">
+      <thead>
+        <tr>
+          <th scope="col" style="min-width: 180px;">Student Roster</th>
+          {% for session in grid_sessions %}
+          <th scope="col" class="session-col-header" style="text-align: center; min-width: 68px;">
+            <a href="?session={{ session.pk }}" class="session-header-link" title="Click to view/edit attendance for {{ session.date|date:'d M Y' }}">
+              <span class="session-date">{{ session.date|date:'d M' }}</span>
+              <span class="session-period">P{{ session.period }}</span>
+            </a>
+            <small class="session-type-pill {% if session.kind == 'test' %}test-pill{% endif %}">
+              {% if session.kind == 'test' %}T{{ session.test_number }}{% else %}{{ session.status|slice:':4' }}{% endif %}
+            </small>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for student,cells in grid_rows %}
+        <tr>
+          <th scope="row">
+            <div class="student-name-cell">
+              <strong>{{ student.name }}</strong>
+              <code class="code-pill">{{ student.usn }}</code>
+            </div>
+          </th>
+          {% for value in cells %}
+          <td class="{% if value == 'A' %}absence-cell{% elif value == '—' %}na-cell{% else %}present-cell{% endif %}" style="text-align: center; font-family: var(--font-mono);">
+            {{ value }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}

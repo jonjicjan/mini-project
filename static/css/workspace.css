@@ -1,0 +1,403 @@
+/* ==========================================================================
+   WORKSPACE & INTERACTIVE EDITOR STYLES
+   ========================================================================== */
+
+.register-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: #ffffff;
+  padding: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  margin: 18px 0 28px;
+  box-shadow: var(--shadow-xs);
+}
+
+.register-tabs a {
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.register-tabs a:hover {
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.register-tabs a[aria-current="page"] {
+  background: var(--emerald-700);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(35, 82, 63, 0.28);
+}
+
+.spaced,
+.record-list {
+  margin: 24px 0;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.table-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.table-scroll th,
+.table-scroll td {
+  border-bottom: 1px solid var(--border-light);
+  padding: 13px 16px;
+  text-align: left;
+  vertical-align: middle;
+  min-width: 90px;
+}
+
+.table-scroll th {
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.table-scroll tbody th {
+  position: sticky;
+  left: 0;
+  min-width: 190px;
+  z-index: 2;
+  background: #ffffff;
+  border-right: 1px solid var(--border-light);
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.02);
+}
+
+.table-scroll tbody tr:hover th,
+.table-scroll tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+.table-scroll select {
+  min-width: 130px;
+  height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.table-scroll td.absence {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.table-scroll th small {
+  display: block;
+  white-space: nowrap;
+  margin-top: 4px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Form layout inside spaced panels */
+.spaced label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.spaced input:not([type="hidden"]),
+.spaced select,
+.spaced textarea {
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+}
+
+.spaced input:focus,
+.spaced select:focus,
+.spaced textarea:focus {
+  outline: none;
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px rgba(44, 101, 78, 0.15);
+}
+
+.spaced textarea {
+  width: 100%;
+  min-height: 110px;
+  line-height: 1.5;
+}
+
+.spaced .button {
+  margin-top: 14px;
+}
+
+.conflict-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.conflict-row:last-child {
+  border-bottom: none;
+}
+
+.errorlist {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.spaced .helptext {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* Paste preview table badges */
+.preview-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--emerald-700);
+  background: var(--emerald-50);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+/* Tab Intro Info Cards */
+.tab-intro-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--emerald-600);
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tab-intro-card .intro-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.tab-intro-card .intro-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.tab-emoji {
+  font-size: 14px;
+}
+
+/* Issued Word Document Cards */
+.issued-docs-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.issued-doc-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+}
+
+.issued-doc-card:hover {
+  border-color: var(--emerald-300);
+  box-shadow: var(--shadow-sm);
+  background: #fafdfb;
+}
+
+.doc-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+/* Attendance Status Select Pills */
+.attendance-select {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  transition: all var(--transition-fast);
+}
+
+.attendance-select.select-present {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+
+.attendance-select.select-absent {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.percentage-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.percentage-pill.percentage-high {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.percentage-pill.percentage-low {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* Attendance Cumulative Matrix Table */
+.attendance-matrix-table th.session-col-header {
+  padding: 8px 6px;
+  vertical-align: top;
+}
+
+.session-header-link {
+  display: block;
+  text-decoration: none;
+  color: var(--text-primary);
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+
+.session-header-link:hover {
+  background: var(--emerald-100);
+}
+
+.session-date {
+  display: block;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.session-period {
+  display: block;
+  font-size: 10px;
+  color: var(--emerald-700);
+  font-weight: 600;
+}
+
+.session-type-pill {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+}
+
+.session-type-pill.test-pill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.student-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+td.absence-cell {
+  color: var(--danger);
+  font-weight: 800;
+  background: #fff5f5;
+}
+
+td.present-cell {
+  color: var(--emerald-800);
+  font-weight: 600;
+}
+
+td.na-cell {
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .spaced,
+  .record-list {
+    padding: 18px;
+  }
+  .register-tabs {
+    gap: 4px;
+  }
+  .register-tabs a {
+    font-size: 12px;
+    padding: 7px 11px;
+  }
+  .table-scroll tbody th {
+    min-width: 140px;
+  }
+}

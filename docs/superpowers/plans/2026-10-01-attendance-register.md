@@ -1,5 +1,7 @@
 # Faculty Attendance Register Implementation Plan
 
+**Implementation update:** Work has started. See [current status](../../implementation-status.md) and [verification evidence](../../verification.md). The original checklist below remains the full delivery plan; uncompleted review, commit and hardware checks are not implied by working code.
+
 > **For student developers:** Build this application task by task from the approved design. Each task identifies files, service contracts, implementation steps and evidence of correctness. Check a step only after completing and verifying it. This repository currently supplies the plan and reference material; application development is assigned to the student team.
 
 **Goal:** Build the approved Windows-hosted college-network application that saves each faculty member's registers and produces replacement Word booklet inserts.

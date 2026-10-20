@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}System Backups & Recovery · Faculty Register{% endblock %}
+
+{% block breadcrumb %}
+<span>Operations</span>
+<span class="breadcrumb-separator">/</span>
+<span>System Backups</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">SYSTEM OPERATIONS</p>
+    <h1>Database Backups & Disaster Recovery<span class="title-dot">.</span></h1>
+    <p class="muted">Point-in-time snapshots of faculty registers, attendance marks, and exported documents.</p>
+  </div>
+</div>
+
+{% if error %}
+<div class="notice error" role="alert">
+  <div class="notice-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+  </div>
+  <div class="notice-body">{{ error }}</div>
+</div>
+{% endif %}
+
+<div class="backup-hero">
+  <div class="backup-hero-info">
+    <div class="backup-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+        <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+        <path d="M3 12A9 3 0 0 0 21 12"></path>
+      </svg>
+    </div>
+    <div>
+      <h3 style="margin-bottom: 4px;">SQLite WAL Architecture</h3>
+      <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Write-Ahead Logging with <code>IMMEDIATE</code> transaction concurrency. Creating a backup initiates a clean checkpoint and writes a verified tarball archive.</p>
+    </div>
+  </div>
+  <form method="post" style="margin: 0;">
+    {% csrf_token %}
+    <button class="button primary" type="submit" style="white-space: nowrap;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+        <polyline points="7 3 7 8 15 8"></polyline>
+      </svg>
+      <span>Create Verified Backup</span>
+    </button>
+  </form>
+</div>
+
+<section class="panel" style="margin-top: 24px;">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2>Backup Archives</h2>
+      <p class="muted">Downloadable tarball snapshots containing database, media, and export files.</p>
+    </div>
+    <span class="badge">{{ backups|length }} Saved Snapshots</span>
+  </div>
+
+  <div class="backup-archives-list">
+    {% for name in backups %}
+    <div class="backup-archive-item">
+      <div class="backup-file-meta">
+        <div class="archive-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div>
+          <strong class="archive-name">{{ name }}</strong>
+          <span class="archive-sub">Complete system snapshot · Integrity verified</span>
+        </div>
+      </div>
+      <a href="{% url 'backup-download' name %}" class="button secondary small">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Download Archive</span>
+      </a>
+    </div>
+    {% empty %}
+    <div class="empty-state" style="padding: 36px; text-align: center;">
+      <p class="muted" style="margin: 0;">No system backups created yet. Click <strong>Create Verified Backup</strong> above to take your first system snapshot.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel backup-guide" style="margin-top: 24px;">
+  <div class="panel-heading">
+    <h2>Offline Disaster Recovery Procedure</h2>
+    <p class="muted">Instructions for restoring system state from a downloaded archive.</p>
+  </div>
+  <ol class="guide-steps">
+    <li><strong>Stop Application Service:</strong> Terminate any active Django or Waitress server processes.</li>
+    <li><strong>Verify Archive Checksum:</strong> Ensure the downloaded archive matches your saved SHA-256 integrity hash.</li>
+    <li><strong>Run Restore Tool:</strong> Execute the built-in restore command in the project root:
+      <pre><code>python manage.py restore_backup &lt;path-to-archive.tar.gz&gt;</code></pre>
+    </li>
+    <li><strong>Safety Guarantee:</strong> The restore process automatically creates a recovery backup of the existing database prior to replacement and forces all active user sessions to safely re-authenticate.</li>
+  </ol>
+</section>
+{% endblock %}

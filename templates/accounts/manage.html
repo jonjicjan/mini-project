@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Faculty Accounts · Faculty Register{% endblock %}
+
+{% block breadcrumb %}
+<span>Administration</span>
+<span class="breadcrumb-separator">/</span>
+<span>Faculty Accounts</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">ADMINISTRATION</p>
+    <h1>Faculty Accounts<span class="title-dot">.</span></h1>
+    <p class="muted">Provision and manage teacher access to the academic workspace.</p>
+  </div>
+</div>
+
+<div class="editor-layout">
+  <section class="panel">
+    <div class="panel-heading">
+      <h2>Create Faculty Account</h2>
+      <p class="muted">Each instructor receives an isolated workspace and their own course registers.</p>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      {% include 'includes/form_fields.html' %}
+      <div class="form-actions">
+        <button class="button primary" type="submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+          <span>Create Faculty Account</span>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="context-panel">
+    <div class="context-card-header">
+      <div class="context-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+      <div>
+        <h4>Role Permissions</h4>
+        <span class="context-sub">Faculty Isolation</span>
+      </div>
+    </div>
+    <p>Teachers can create courses, record attendance, track CIE marks, and export verified Word booklets.</p>
+    <div class="context-divider"></div>
+    <p class="muted" style="font-size: 12px;">Only administrators can reset credentials, disable faculty accounts, or access system backup archives.</p>
+  </aside>
+</div>
+
+<section class="panel account-list" style="margin-top: 24px;">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2>Faculty Directory</h2>
+      <p class="muted">Registered teaching personnel in the department.</p>
+    </div>
+    <span class="badge">{{ faculty_users|length }} Accounts</span>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Faculty Member</th>
+          <th scope="col">Username</th>
+          <th scope="col">Status</th>
+          <th scope="col" style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in faculty_users %}
+        <tr>
+          <td>
+            <div class="user-badge">
+              <span class="user-avatar-sm" aria-hidden="true">{{ account.username|first|upper }}</span>
+              <div>
+                <strong>{{ account.display_name|default:account.username }}</strong>
+                {% if account.is_superuser %}
+                <span class="badge badge-subtle" style="margin-left: 6px;">Superuser</span>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td><code class="code-pill">{{ account.username }}</code></td>
+          <td>
+            {% if account.is_active %}
+            <span class="badge badge-success">● Active</span>
+            {% else %}
+            <span class="badge badge-warning">○ Disabled</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <a href="{% url 'faculty-reset' account.pk %}" class="action-btn-link" aria-label="Reset password for {{ account.username }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+              <span>Reset Password</span>
+            </a>
+            <span class="action-divider">·</span>
+            {% if account.is_active %}
+            <a href="{% url 'faculty-disable' account.pk %}" class="action-btn-link text-danger" aria-label="Disable {{ account.username }}">
+              <span>Disable</span>
+            </a>
+            {% else %}
+            <a href="{% url 'faculty-enable' account.pk %}" class="action-btn-link text-success" aria-label="Enable {{ account.username }}">
+              <span>Enable</span>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="muted" style="text-align: center; padding: 32px;">No faculty accounts created yet. Use the form above to add an instructor.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

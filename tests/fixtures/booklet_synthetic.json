@@ -1,0 +1,1815 @@
+{
+  "schema_version": 1,
+  "export_date": "2026-08-07",
+  "source_revision": 1,
+  "draft": true,
+  "warnings": [],
+  "register": {
+    "id": "synthetic-register",
+    "academic_year": "2026-27",
+    "branch": "CSE",
+    "semester": "5",
+    "section": "A",
+    "subject": "Sample Computing Course",
+    "subject_code": "DEMO501",
+    "faculty": "Sample Faculty"
+  },
+  "students": [
+    {
+      "id": "student-1",
+      "serial": 1,
+      "usn": "DEMO001",
+      "name": "Sample Student 01"
+    },
+    {
+      "id": "student-2",
+      "serial": 2,
+      "usn": "DEMO002",
+      "name": "Sample Student 02"
+    },
+    {
+      "id": "student-3",
+      "serial": 3,
+      "usn": "DEMO003",
+      "name": "Sample Student 03"
+    },
+    {
+      "id": "student-4",
+      "serial": 4,
+      "usn": "DEMO004",
+      "name": "Sample Student 04"
+    },
+    {
+      "id": "student-5",
+      "serial": 5,
+      "usn": "DEMO005",
+      "name": "Sample Student 05"
+    },
+    {
+      "id": "student-6",
+      "serial": 6,
+      "usn": "DEMO006",
+      "name": "Sample Student 06"
+    },
+    {
+      "id": "student-7",
+      "serial": 7,
+      "usn": "DEMO007",
+      "name": "Sample Student 07"
+    },
+    {
+      "id": "student-8",
+      "serial": 8,
+      "usn": "DEMO008",
+      "name": "Sample Student 08"
+    },
+    {
+      "id": "student-9",
+      "serial": 9,
+      "usn": "DEMO009",
+      "name": "Sample Student 09"
+    },
+    {
+      "id": "student-10",
+      "serial": 10,
+      "usn": "DEMO010",
+      "name": "Sample Student 10"
+    },
+    {
+      "id": "student-11",
+      "serial": 11,
+      "usn": "DEMO011",
+      "name": "Sample Student 11"
+    },
+    {
+      "id": "student-12",
+      "serial": 12,
+      "usn": "DEMO012",
+      "name": "Sample Student 12"
+    },
+    {
+      "id": "student-13",
+      "serial": 13,
+      "usn": "DEMO013",
+      "name": "Sample Student 13"
+    },
+    {
+      "id": "student-14",
+      "serial": 14,
+      "usn": "DEMO014",
+      "name": "Sample Student 14"
+    },
+    {
+      "id": "student-15",
+      "serial": 15,
+      "usn": "DEMO015",
+      "name": "Sample Student 15"
+    },
+    {
+      "id": "student-16",
+      "serial": 16,
+      "usn": "DEMO016",
+      "name": "Sample Student 16"
+    },
+    {
+      "id": "student-17",
+      "serial": 17,
+      "usn": "DEMO017",
+      "name": "Sample Student 17"
+    },
+    {
+      "id": "student-18",
+      "serial": 18,
+      "usn": "DEMO018",
+      "name": "Sample Student 18"
+    },
+    {
+      "id": "student-19",
+      "serial": 19,
+      "usn": "DEMO019",
+      "name": "Sample Student 19"
+    },
+    {
+      "id": "student-20",
+      "serial": 20,
+      "usn": "DEMO020",
+      "name": "Sample Student 20"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "session-1",
+      "display_number": 1,
+      "date": "2026-08-03",
+      "period": "1",
+      "kind": "lesson",
+      "status": "conducted"
+    },
+    {
+      "id": "session-2",
+      "display_number": 2,
+      "date": "2026-08-04",
+      "period": "1",
+      "kind": "lesson",
+      "status": "conducted"
+    },
+    {
+      "id": "session-3",
+      "display_number": 3,
+      "date": "2026-08-05",
+      "period": "1",
+      "kind": "lesson",
+      "status": "conducted"
+    },
+    {
+      "id": "session-4",
+      "display_number": 4,
+      "date": "2026-08-06",
+      "period": "1",
+      "kind": "lesson",
+      "status": "conducted"
+    },
+    {
+      "id": "session-5",
+      "display_number": 5,
+      "date": "2026-08-07",
+      "period": "1",
+      "kind": "lesson",
+      "status": "conducted"
+    },
+    {
+      "id": "session-6",
+      "display_number": 6,
+      "date": "2026-08-08",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-7",
+      "display_number": 7,
+      "date": "2026-08-09",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-8",
+      "display_number": 8,
+      "date": "2026-08-10",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-9",
+      "display_number": 9,
+      "date": "2026-08-11",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-10",
+      "display_number": 10,
+      "date": "2026-08-12",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-11",
+      "display_number": 11,
+      "date": "2026-08-13",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-12",
+      "display_number": 12,
+      "date": "2026-08-14",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-13",
+      "display_number": 13,
+      "date": "2026-08-15",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-14",
+      "display_number": 14,
+      "date": "2026-08-16",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-15",
+      "display_number": 15,
+      "date": "2026-08-17",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-16",
+      "display_number": 16,
+      "date": "2026-08-18",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-17",
+      "display_number": 17,
+      "date": "2026-08-19",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-18",
+      "display_number": 18,
+      "date": "2026-08-20",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-19",
+      "display_number": 19,
+      "date": "2026-08-21",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-20",
+      "display_number": 20,
+      "date": "2026-08-22",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-21",
+      "display_number": 21,
+      "date": "2026-08-23",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-22",
+      "display_number": 22,
+      "date": "2026-08-24",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-23",
+      "display_number": 23,
+      "date": "2026-08-25",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-24",
+      "display_number": 24,
+      "date": "2026-08-26",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-25",
+      "display_number": 25,
+      "date": "2026-08-27",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-26",
+      "display_number": 26,
+      "date": "2026-08-28",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-27",
+      "display_number": 27,
+      "date": "2026-08-29",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-28",
+      "display_number": 28,
+      "date": "2026-08-30",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-29",
+      "display_number": 29,
+      "date": "2026-08-31",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-30",
+      "display_number": 30,
+      "date": "2026-09-01",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-31",
+      "display_number": 31,
+      "date": "2026-09-02",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-32",
+      "display_number": 32,
+      "date": "2026-09-03",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-33",
+      "display_number": 33,
+      "date": "2026-09-04",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-34",
+      "display_number": 34,
+      "date": "2026-09-05",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-35",
+      "display_number": 35,
+      "date": "2026-09-06",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-36",
+      "display_number": 36,
+      "date": "2026-09-07",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-37",
+      "display_number": 37,
+      "date": "2026-09-08",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-38",
+      "display_number": 38,
+      "date": "2026-09-09",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-39",
+      "display_number": 39,
+      "date": "2026-09-10",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-40",
+      "display_number": 40,
+      "date": "2026-09-11",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-41",
+      "display_number": 41,
+      "date": "2026-09-12",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-42",
+      "display_number": 42,
+      "date": "2026-09-13",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-43",
+      "display_number": 43,
+      "date": "2026-09-14",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-44",
+      "display_number": 44,
+      "date": "2026-09-15",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-45",
+      "display_number": 45,
+      "date": "2026-09-16",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-46",
+      "display_number": 46,
+      "date": "2026-09-17",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-47",
+      "display_number": 47,
+      "date": "2026-09-18",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-48",
+      "display_number": 48,
+      "date": "2026-09-19",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-49",
+      "display_number": 49,
+      "date": "2026-09-20",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-50",
+      "display_number": 50,
+      "date": "2026-09-21",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-51",
+      "display_number": 51,
+      "date": "2026-09-22",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-52",
+      "display_number": 52,
+      "date": "2026-09-23",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-53",
+      "display_number": 53,
+      "date": "2026-09-24",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-54",
+      "display_number": 54,
+      "date": "2026-09-25",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-55",
+      "display_number": 55,
+      "date": "2026-09-26",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-56",
+      "display_number": 56,
+      "date": "2026-09-27",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-57",
+      "display_number": 57,
+      "date": "2026-09-28",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-58",
+      "display_number": 58,
+      "date": "2026-09-29",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-59",
+      "display_number": 59,
+      "date": "2026-09-30",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-60",
+      "display_number": 60,
+      "date": "2026-10-01",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-61",
+      "display_number": 61,
+      "date": "2026-10-02",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-62",
+      "display_number": 62,
+      "date": "2026-10-03",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-63",
+      "display_number": 63,
+      "date": "2026-10-04",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-64",
+      "display_number": 64,
+      "date": "2026-10-05",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-65",
+      "display_number": 65,
+      "date": "2026-10-06",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-66",
+      "display_number": 66,
+      "date": "2026-10-07",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-67",
+      "display_number": 67,
+      "date": "2026-10-08",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-68",
+      "display_number": 68,
+      "date": "2026-10-09",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-69",
+      "display_number": 69,
+      "date": "2026-10-10",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-70",
+      "display_number": 70,
+      "date": "2026-10-11",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-71",
+      "display_number": 71,
+      "date": "2026-10-12",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-72",
+      "display_number": 72,
+      "date": "2026-10-13",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-73",
+      "display_number": 73,
+      "date": "2026-10-14",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-74",
+      "display_number": 74,
+      "date": "2026-10-15",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    },
+    {
+      "id": "session-75",
+      "display_number": 75,
+      "date": "2026-10-16",
+      "period": "1",
+      "kind": "lesson",
+      "status": "planned"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-1",
+      "topic": "Introduction and course outcomes",
+      "planned_date": "01/08/26",
+      "execution_date": "01/08/26",
+      "remarks": ""
+    },
+    {
+      "id": "lesson-2",
+      "topic": "Problem solving methods",
+      "planned_date": "02/08/26",
+      "execution_date": "02/08/26",
+      "remarks": ""
+    },
+    {
+      "id": "lesson-3",
+      "topic": "Worked examples and discussion",
+      "planned_date": "03/08/26",
+      "execution_date": "03/08/26",
+      "remarks": ""
+    }
+  ],
+  "attendance": {
+    "student-1": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-2": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-3": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-4": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-5": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-6": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-7": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-8": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-9": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-10": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-11": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-12": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-13": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-14": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-15": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-16": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-17": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-18": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-19": {
+      "cells": {
+        "session-1": "1",
+        "session-2": "2",
+        "session-3": "A",
+        "session-4": "3",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 3,
+        "eligible": 5,
+        "percentage": "60"
+      },
+      "tests": {}
+    },
+    "student-20": {
+      "cells": {
+        "session-1": "-",
+        "session-2": "-",
+        "session-3": "1",
+        "session-4": "2",
+        "session-5": "A"
+      },
+      "cumulative": {
+        "present": 2,
+        "eligible": 3,
+        "percentage": "66.67"
+      },
+      "tests": {}
+    }
+  },
+  "column_totals": {
+    "0": {
+      "session-1": {
+        "present": 19,
+        "absent": 0
+      },
+      "session-2": {
+        "present": 19,
+        "absent": 0
+      },
+      "session-3": {
+        "present": 1,
+        "absent": 19
+      },
+      "session-4": {
+        "present": 20,
+        "absent": 0
+      },
+      "session-5": {
+        "present": 0,
+        "absent": 20
+      }
+    }
+  },
+  "assessments": {
+    "maxima": {
+      "A1": "25",
+      "A2": "25",
+      "A3": "25",
+      "assignment": "25",
+      "T1": "25",
+      "T2": "25",
+      "T3": "25",
+      "test": "25",
+      "overall": "50"
+    },
+    "students": {
+      "student-1": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-2": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-3": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-4": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-5": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-6": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-7": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-8": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-9": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-10": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-11": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-12": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-13": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-14": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-15": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-16": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-17": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-18": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-19": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "60",
+          "",
+          ""
+        ]
+      },
+      "student-20": {
+        "raw_marks": {
+          "A1": "20"
+        },
+        "pending_keys": [
+          "A2",
+          "A3",
+          "T1",
+          "T2",
+          "T3"
+        ],
+        "status": "pending",
+        "contributions": {},
+        "final_result": null,
+        "display": [
+          "20",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "66.67",
+          "",
+          ""
+        ]
+      }
+    }
+  },
+  "timetable": {
+    "effective_from": "2026-08-03",
+    "slots": [
+      {
+        "id": "1",
+        "label": "1",
+        "start": "08:30",
+        "end": "09:25",
+        "break": false
+      },
+      {
+        "id": "2",
+        "label": "2",
+        "start": "09:25",
+        "end": "10:20",
+        "break": false
+      },
+      {
+        "id": "8",
+        "label": "Tea break",
+        "start": "10:20",
+        "end": "10:35",
+        "break": true
+      },
+      {
+        "id": "3",
+        "label": "3",
+        "start": "10:35",
+        "end": "11:30",
+        "break": false
+      },
+      {
+        "id": "4",
+        "label": "4",
+        "start": "11:30",
+        "end": "12:25",
+        "break": false
+      },
+      {
+        "id": "9",
+        "label": "Lunch",
+        "start": "12:25",
+        "end": "13:15",
+        "break": true
+      },
+      {
+        "id": "5",
+        "label": "5",
+        "start": "13:15",
+        "end": "14:10",
+        "break": false
+      },
+      {
+        "id": "6",
+        "label": "6",
+        "start": "14:10",
+        "end": "15:05",
+        "break": false
+      },
+      {
+        "id": "7",
+        "label": "7",
+        "start": "15:05",
+        "end": "16:00",
+        "break": false
+      }
+    ],
+    "entries": [
+      {
+        "day": "Monday",
+        "period": "1",
+        "time": "08:30 - 09:25",
+        "subject_code": "DEMO501",
+        "section": "5 A",
+        "activity": "Theory"
+      },
+      {
+        "day": "Tuesday",
+        "period": "1",
+        "time": "08:30 - 09:25",
+        "subject_code": "DEMO501",
+        "section": "5 A",
+        "activity": "Theory"
+      },
+      {
+        "day": "Wednesday",
+        "period": "1",
+        "time": "08:30 - 09:25",
+        "subject_code": "DEMO501",
+        "section": "5 A",
+        "activity": "Theory"
+      },
+      {
+        "day": "Thursday",
+        "period": "1",
+        "time": "08:30 - 09:25",
+        "subject_code": "DEMO501",
+        "section": "5 A",
+        "activity": "Theory"
+      },
+      {
+        "day": "Friday",
+        "period": "1",
+        "time": "08:30 - 09:25",
+        "subject_code": "DEMO501",
+        "section": "5 A",
+        "activity": "Theory"
+      }
+    ]
+  }
+}

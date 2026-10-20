@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}My registers · Faculty Register{% endblock %}
+{% block breadcrumb %}My Registers{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">YOUR TEACHING, ORGANISED</p>
+    <h1>My registers<span class="title-dot">.</span></h1>
+    <p class="muted">Manage attendance, assessments, schedules, and official Word booklet exports.</p>
+  </div>
+  <a class="button primary" href="{% url 'register-create' %}">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    <span>New register</span>
+  </a>
+</div>
+
+<section class="overview" aria-label="Register overview">
+  <div>
+    <span class="eyebrow">ACTIVE REGISTERS</span>
+    <strong>{{ active_count|stringformat:'02d' }}</strong>
+  </div>
+  <div>
+    <span class="eyebrow">ARCHIVED REGISTERS</span>
+    <strong>{{ archived_count|stringformat:'02d' }}</strong>
+  </div>
+  <div class="overview-note">
+    <span class="eyebrow">A PLACE FOR EVERY TERM</span>
+    <p>Keep current courses in your active roster.<br>Archive past semesters to preserve verified records.</p>
+  </div>
+</section>
+
+<div class="list-toolbar">
+  <nav class="tabs" aria-label="Register status">
+    <a href="{% url 'register-list' %}" {% if not archived %}aria-current="page"{% endif %}>
+      Active <span>{{ active_count }}</span>
+    </a>
+    <a href="?view=archived" {% if archived %}aria-current="page"{% endif %}>
+      Archived <span>{{ archived_count }}</span>
+    </a>
+  </nav>
+
+  <form method="get" class="search">
+    {% if archived %}<input type="hidden" name="view" value="archived">{% endif %}
+    <label for="search" class="sr-only">Search registers</label>
+    <input id="search" name="q" value="{{ query }}" placeholder="Search subject name or code...">
+    <button type="submit" class="button subtle">Search</button>
+  </form>
+</div>
+
+<div class="register-grid">
+  {% for register in registers %}
+  <article class="register-card">
+    <div class="card-top">
+      <span class="course-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          <path d="M6 6h10"></path>
+          <path d="M6 10h10"></path>
+        </svg>
+      </span>
+      <span class="badge">{{ register.academic_year }}</span>
+    </div>
+
+    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+      <span class="eyebrow" style="margin: 0;">{{ register.subject_code }}</span>
+      <span class="badge" style="font-size: 10px; padding: 2px 8px;">Sec {{ register.section }}</span>
+    </div>
+
+    <h2>
+      <a href="{% url 'register-setup' register.pk %}" aria-label="Open {{ register.subject_name }}">{{ register.subject_name }}</a>
+    </h2>
+    <p class="muted" style="font-size: 13px;">{{ register.branch }} · Semester {{ register.semester }}</p>
+
+    <div class="card-bottom">
+      <div style="font-size: 11px; color: var(--text-muted);">
+        <span>{{ register.term_start|date:'d M' }} – {{ register.term_end|date:'d M Y' }}</span>
+        <span style="display: block; font-size: 10px; margin-top: 2px;">Revision {{ register.revision }}</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a href="{% url 'register-setup' register.pk %}" style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Settings</a>
+        <a href="{% url 'register-workspace' register.pk 'students' %}" class="button primary" style="height: 32px; padding: 0 12px; font-size: 11px;">
+          <span>Workspace</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </a>
+      </div>
+    </div>
+  </article>
+  {% empty %}
+  <section class="empty-state">
+    <span class="empty-icon" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="12" y1="18" x2="12" y2="12"></line>
+        <line x1="9" y1="15" x2="15" y2="15"></line>
+      </svg>
+    </span>
+    <p class="eyebrow">{% if query %}NO MATCHES{% elif archived %}YOUR ARCHIVE{% else %}A FRESH START{% endif %}</p>
+    <h2>{% if query %}No matching registers{% elif archived %}No archived registers yet{% else %}Your next term starts here{% endif %}</h2>
+    <p>{% if query %}Try a different subject name or code.{% elif archived %}Registers you archive will be kept here for reference.{% else %}Create a register with your subject, section and term dates.<br>You can return to update its details at any time.{% endif %}</p>
+    {% if not archived and not query %}
+    <a class="button primary" href="{% url 'register-create' %}" style="margin-top: 14px;">Create your first register →</a>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

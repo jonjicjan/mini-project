@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Access Denied · Faculty Register{% endblock %}
+
+{% block content %}
+<section class="dialog-panel error-page-panel">
+  <div class="dialog-icon icon-danger">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  </div>
+  <p class="eyebrow">ACCESS RESTRICTED</p>
+  <h1>Administrator Clearance Required</h1>
+  <p class="dialog-explanation">This area or action requires elevated system permissions. If you believe you should have access, please contact your department administrator.</p>
+  <div class="form-actions" style="justify-content: center; margin-top: 24px;">
+    <a href="{% url 'register-list' %}" class="button primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <span>Return to My Registers</span>
+    </a>
+  </div>
+</section>
+{% endblock %}

@@ -1,6 +1,57 @@
 # Faculty Attendance Register
 
-This repository is the project handoff for students developing a faculty attendance-register application. It contains the approved design, a detailed implementation plan and 24 photographs of the existing register. Application code has not been created.
+This repository contains the approved design, implementation plan, 24 reference photographs, and a working manual-entry application. Faculty can maintain separate registers by department, section and subject, with student and lesson entry/paste imports, timetables, scheduling, holidays, attendance, assessment rules and marks, and Word exports from saved records.
+
+**Ready for local workflow use and evaluation; college production activation is pending.** Verified database backup/restore and Windows deployment scripts are included. Hosting, HTTPS trust, second-PC access and physical printer acceptance still need checking on the intended college setup. Read the [faculty guide](docs/faculty-guide.md), [Windows setup guide](docs/windows-setup.md), [implementation status](docs/implementation-status.md) and [verification evidence](docs/verification.md).
+
+## Run the current application on Windows
+
+For a new checkout, install Python 3.12, open PowerShell in the project directory, and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/windows/setup-development.ps1
+powershell -ExecutionPolicy Bypass -File scripts/windows/start-development.ps1
+```
+
+Setup prompts for the first administrator's username and password; there are no default credentials. If Python is not registered with the `py` launcher, pass its executable path with `-Python`. For subsequent setup runs, use `-SkipAdministrator`.
+
+The implementation session has already created `.venv`, installed dependencies and migrated the local development database on this machine. **Double-click `Start Faculty Register.cmd`** to create your initial administrator through local prompts and start the app. Alternatively, finish first-time setup here with:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py bootstrap_admin
+powershell -ExecutionPolicy Bypass -File scripts/windows/start-development.ps1
+```
+
+Open **http://127.0.0.1:8000/**. Sign in as the administrator and use **Faculty accounts** to create logins. Each faculty member can create, edit, search, archive and restore their own registers. Open a register and choose **Students, attendance & marks** for its workflow tabs. Saves are explicit; attendance completion is a separate action. Stop a foreground development server with Ctrl+C.
+
+Local development records are stored in `var/register.sqlite3`, including issued Word documents. The generated development secret is also in ignored `var/`. Keep this directory to preserve accounts and registers across restarts. Tests use separate temporary databases and synthetic accounts; no photographed student records are imported. Setup prompts for administrator credentials if an administrator does not already exist.
+
+For local administrator password recovery:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py changepassword YOUR_ADMIN_USERNAME
+```
+
+## Developer checks
+
+Generate the 12-page Word print prototype with synthetic data:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py render_booklet_fixture --output artifacts/booklet-sample.docx
+```
+
+See the [print guide](docs/print-guide.md) for page order, half-leaf assembly, fit warnings and pending printer calibration. This command does not read or change saved registers.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/integration -q
+.\.venv\Scripts\python.exe -m pytest tests/unit -q
+.\.venv\Scripts\python.exe -m pytest tests/browser -q --browser chromium --browser-channel msedge
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
+Browser checks can use installed Microsoft Edge as shown. For Playwright's bundled Chromium, first run `python -m playwright install chromium` in the environment and omit `--browser-channel msedge`. Runtime dependencies are pinned in `requirements.lock`; development and testing dependencies are pinned in `requirements-dev.lock`. The development launcher is local-only; the separate [Windows deployment guide](docs/windows-setup.md) describes Waitress/Caddy HTTPS setup.
 
 ## Start here
 
@@ -10,7 +61,9 @@ This repository is the project handoff for students developing a faculty attenda
 
 The `docs/superpowers/` path preserves the original document location. The plan is written for student developers and requires no particular AI tool.
 
-## Application to build
+## Original design scope
+
+The manual release implements the core record workflows below. Shared timetable versions, reusable marking templates, calendar views and resilient autosave remain additional work; see the implementation status for the exact boundary.
 
 - One Windows PC hosts the application; faculty access it through browsers on the college network.
 - Each faculty member has a login and centrally saved registers.
