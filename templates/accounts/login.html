@@ -1,65 +1,234 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Sign in · Faculty Register{% endblock %}
+{% block title %}Sign in · KSIT Faculty Register{% endblock %}
+
+{% block body_class %}login-body{% endblock %}
+{% block main_class %}login-hero-workspace{% endblock %}
+{% block content_class %}login-hero-content{% endblock %}
 
 {% block content %}
-<div class="login-layout">
-  <section class="login-story">
-    <div class="brand" style="padding: 0; margin-bottom: 40px;">
-      <div class="brand-mark" style="background: #ffffff; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.4);">
-        <img src="{% static 'img/ksit_logo.jpg' %}" alt="KSIT Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 6px;">
-      </div>
-      <div class="brand-text">
-        <span class="brand-sub" style="color: #a7e2cb;">K S INSTITUTE OF TECHNOLOGY</span>
-        <strong class="brand-title" style="color: #ffffff;">Faculty Register</strong>
-      </div>
+<!-- Top Institutional Header Ribbon -->
+<header class="login-top-ribbon" role="banner">
+  <div class="login-top-left">
+    <span class="login-top-pill">KSGI</span>
+    <span class="login-top-society">
+      <strong>Kammavari Sangham (R) 1952</strong>
+      <span style="opacity: 0.5;">·</span>
+      <span>K.S. Institute of Technology, Bengaluru</span>
+    </span>
+  </div>
+  <div class="login-top-right">
+    <div class="login-top-status">
+      <span class="login-status-dot" aria-hidden="true"></span>
+      <span>Portal Online</span>
     </div>
+    <span style="opacity: 0.4;">|</span>
+    <span>Autonomous · Affiliated to VTU</span>
+  </div>
+</header>
 
-    <div>
-      <p class="eyebrow" style="color: #a7e2cb;">LESS MANUAL WORK. VERIFIED RECORDS.</p>
-      <h1>A precision space<br>for every course.</h1>
-      <p style="font-size: 14px; line-height: 1.6; max-width: 380px;">
-        Maintain course rosters, timetable slots, running attendance, and internal assessments with certified physical booklet printing.
-      </p>
-
-      <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #d6f4e8;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
-          <span>Automatic running attendance counts & red absence marks</span>
+<!-- Central Hero Card -->
+<div class="login-card-container">
+  <div class="login-layout">
+    <!-- Left Showcase Panel -->
+    <section class="login-story" aria-label="Institution Information">
+      <div>
+        <div class="login-brand-header">
+          <div class="login-brand-logo-frame">
+            <img src="{% static 'img/ksit_logo.jpg' %}" alt="KSIT Logo">
+          </div>
+          <div class="login-brand-info">
+            <span class="login-brand-institution">K.S. Institute of Technology</span>
+            <strong class="login-brand-system">Faculty Register</strong>
+          </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
-          <span>Cumulative Internal Tests & continuous evaluation</span>
+
+        <div class="login-hero-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>Official Academic Portal</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); font-size: 11px;">✓</span>
-          <span>Authentic 210×307 mm Word booklet & in-browser preview</span>
+
+        <h1>A precision space<br>for every course.</h1>
+        <p class="login-story-desc">
+          Maintain course rosters, timetable slots, running attendance, and internal assessments with certified physical booklet printing.
+        </p>
+
+        <div class="login-feature-list">
+          <div class="login-feature-item">
+            <div class="login-feature-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="login-feature-text">
+              <strong>Running Attendance & Red Absences</strong>
+              <span>Bi-directional tracking with automated period eligibility enforcement</span>
+            </div>
+          </div>
+
+          <div class="login-feature-item">
+            <div class="login-feature-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="login-feature-text">
+              <strong>Continuous Internal Evaluation (CIE)</strong>
+              <span>Configurable best-of-N tests, assignments, and lab marks computation</span>
+            </div>
+          </div>
+
+          <div class="login-feature-item">
+            <div class="login-feature-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="login-feature-text">
+              <strong>Physical Booklet DOCX Synthesis</strong>
+              <span>Certified 210×307 mm Word document generation with SHA-256 snapshots</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style="font-size: 11px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.5); font-weight: 700; margin-top: 40px;">
-      PRODUCTION GRADE · WAL STORAGE
-    </div>
-  </section>
+      <div class="login-story-footer">
+        <div class="login-trust-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>AUTONOMOUS INSTITUTION</span>
+        </div>
+        <span>VTU · AICTE · WAL DB</span>
+      </div>
+    </section>
 
-  <section class="login-panel">
-    <p class="eyebrow">WELCOME BACK</p>
-    <h2>Sign in to your workspace</h2>
-    <p class="muted" style="margin-bottom: 28px;">Use the credentials provided by your institution.</p>
+    <!-- Right Login Panel -->
+    <section class="login-panel" aria-label="Sign in form">
+      <div class="login-panel-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Faculty & Staff Portal</span>
+      </div>
 
-    <form method="post" style="display: flex; flex-direction: column; gap: 18px;">
-      {% csrf_token %}
-      {% include 'includes/form_fields.html' %}
-      <button class="button primary full" type="submit" style="height: 46px; font-size: 14px; margin-top: 10px;">
-        <span>Sign in to account</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-      </button>
-    </form>
+      <h2>Sign in to your workspace</h2>
+      <p class="login-panel-sub">Use the credentials provided by your institution.</p>
 
-    <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border-light); font-size: 12px; color: var(--text-muted); line-height: 1.6;">
-      <p style="margin: 0;">Need an account or password reset?<br>Contact your institutional administrator.</p>
-    </div>
-  </section>
+      {% if form.non_field_errors %}
+        <div class="notice error" role="alert" style="margin-bottom: 20px;">
+          <div class="notice-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <div class="notice-body">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" novalidate>
+        {% csrf_token %}
+        {% if request.GET.next %}
+          <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+
+        <div class="login-field">
+          <label class="login-field-label" for="id_username">
+            <span>Username / Faculty ID <span class="required" style="color: #dc2626;">*</span></span>
+          </label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
+            <input type="text" 
+                   name="username" 
+                   id="id_username" 
+                   autocomplete="username" 
+                   required 
+                   placeholder="Enter your username or ID" 
+                   value="{{ form.username.value|default_if_none:'' }}"
+                   autofocus>
+          </div>
+          {% if form.username.errors %}
+            <div class="field-error" style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ form.username.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="login-field">
+          <label class="login-field-label" for="id_password">
+            <span>Password <span class="required" style="color: #dc2626;">*</span></span>
+          </label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input type="password" 
+                   name="password" 
+                   id="id_password" 
+                   autocomplete="current-password" 
+                   required 
+                   placeholder="Enter your account password">
+            <button type="button" class="login-password-toggle" id="togglePasswordBtn" aria-label="Toggle password visibility" title="Show or hide password">
+              <svg id="eyeIconOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg id="eyeIconClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          {% if form.password.errors %}
+            <div class="field-error" style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ form.password.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <button class="login-submit-btn" type="submit" id="loginSubmitBtn">
+          <span>Sign in to Dashboard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
+      </form>
+
+      <div class="login-help-box">
+        <div class="login-help-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div class="login-help-text">
+          <strong>Need account credentials or password reset?</strong>
+          <span>Contact your department coordinator or the institutional administrator to obtain access.</span>
+        </div>
+      </div>
+    </section>
+  </div>
 </div>
+
+<!-- Bottom Institutional Footer Ribbon -->
+<footer class="login-bottom-ribbon" role="contentinfo">
+  <div class="login-bottom-left">
+    <span>K.S. Institute of Technology · #14, Raghuvanahalli, Kanakapura Main Road, Bengaluru - 560109</span>
+  </div>
+  <div class="login-bottom-right">
+    <span>© 2026 Faculty Register System</span>
+    <span style="opacity: 0.4;">·</span>
+    <span>Autonomous Institution · VTU Affiliated</span>
+  </div>
+</footer>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const pwdInput = document.getElementById('id_password');
+    const eyeOpen = document.getElementById('eyeIconOpen');
+    const eyeClosed = document.getElementById('eyeIconClosed');
+
+    if (toggleBtn && pwdInput) {
+      toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const isPassword = pwdInput.type === 'password';
+        pwdInput.type = isPassword ? 'text' : 'password';
+        eyeOpen.style.display = isPassword ? 'none' : 'block';
+        eyeClosed.style.display = isPassword ? 'block' : 'none';
+        toggleBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        pwdInput.focus();
+      });
+    }
+  });
+</script>
 {% endblock %}

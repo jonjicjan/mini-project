@@ -12,10 +12,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=3.0">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=3.3">
   <script src="{% static 'js/forms.js' %}?v=3.0" defer></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
 
 {% if user.is_authenticated %}
@@ -104,7 +104,7 @@
 </aside>
 {% endif %}
 
-<main id="main" class="{% if user.is_authenticated %}workspace{% else %}public-workspace{% endif %}">
+<main id="main" class="{% if user.is_authenticated %}workspace{% else %}public-workspace{% endif %} {% block main_class %}{% endblock %}">
   {% if user.is_authenticated %}
   <header class="topbar">
     <div class="topbar-breadcrumb">
@@ -126,7 +126,7 @@
   </header>
   {% endif %}
 
-  <div class="{% if user.is_authenticated %}content{% else %}public-content{% endif %}">
+  <div class="{% if user.is_authenticated %}content{% else %}public-content{% endif %} {% block content_class %}{% endblock %}">
     {% for message in messages %}
       <div class="notice {{ message.tags }}" role="status">
         <div class="notice-icon">
