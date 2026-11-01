@@ -5,6 +5,16 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local .env file if present
+env_file = BASE_DIR / ".env"
+if env_file.exists():
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, val = line.partition("=")
+            os.environ.setdefault(key.strip(), val.strip().strip("'\""))
+
 DEBUG = os.environ.get("REGISTER_ENV", "development") == "development"
 DATA_DIR = Path(os.environ.get("REGISTER_DATA_DIR", BASE_DIR / "var")).resolve()
 if not DEBUG and not os.environ.get("REGISTER_DATA_DIR"):
