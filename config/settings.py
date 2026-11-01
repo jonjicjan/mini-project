@@ -15,40 +15,73 @@ if env_file.exists():
             key, _, val = line.partition("=")
             os.environ.setdefault(key.strip(), val.strip().strip("'\""))
 
-DEBUG = os.environ.get("REGISTER_ENV", "development") == "development"
+# Production and Debug detection
+is_render = "RENDER" in os.environ
+is_production = os.environ.get("REGISTER_ENV") == "production" or is_render
+DEBUG = not is_production and os.environ.get("REGISTER_ENV", "development") == "development"
+
 DATA_DIR = Path(os.environ.get("REGISTER_DATA_DIR", BASE_DIR / "var")).resolve()
-if not DEBUG and not os.environ.get("REGISTER_DATA_DIR"):
-    raise ImproperlyConfigured("Production requires an explicit REGISTER_DATA_DIR.")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 SECRET_KEY = os.environ.get("REGISTER_SECRET_KEY", "")
-if not SECRET_KEY and DEBUG:
-    secret_file = DATA_DIR / "development-secret.key"
+if not SECRET_KEY:
+    secret_file = DATA_DIR / ("development-secret.key" if DEBUG else "production-secret.key")
     try:
         with secret_file.open("x", encoding="utf-8") as stream:
             stream.write(secrets.token_urlsafe(64))
     except FileExistsError:
         pass
     SECRET_KEY = secret_file.read_text(encoding="utf-8").strip()
-if len(SECRET_KEY) < 50:
-    raise ImproperlyConfigured("REGISTER_SECRET_KEY must contain at least 50 characters.")
 
+# Base allowed hosts
 ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "mini-project-2-7lhe.onrender.com",
+]
+
+# Additional allowed hosts from environment
+extra_hosts = [
     s.strip()
-    for s in os.environ.get("REGISTER_ALLOWED_HOSTS", "127.0.0.1,localhost" if DEBUG else "").split(
-        ","
-    )
+    for s in os.environ.get("REGISTER_ALLOWED_HOSTS", "").split(",")
     if s.strip()
 ]
-if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
-    raise ImproperlyConfigured("Set explicit REGISTER_ALLOWED_HOSTS; wildcards are not allowed.")
+for host in extra_hosts:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
+# Automatically add Render's assigned external hostname
+render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
+
+# CSRF Trusted Origins for secure HTTPS form submissions
 CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://mini-project-2-7lhe.onrender.com",
+]
+
+extra_csrf = [
     s.strip()
     for s in os.environ.get("REGISTER_CSRF_TRUSTED_ORIGINS", "").split(",")
     if s.strip()
 ]
-if not CSRF_TRUSTED_ORIGINS and not DEBUG:
-    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h and not h.startswith(".")]
+for origin in extra_csrf:
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+if render_hostname:
+    render_origin = f"https://{render_hostname}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
+
+if not DEBUG:
+    for h in ALLOWED_HOSTS:
+        if h and not h.startswith(".") and not h.startswith("127.") and h != "localhost":
+            origin = f"https://{h}"
+            if origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(origin)
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -122,8 +155,8 @@ SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
-# Only enable this when a loopback-only server is behind the configured trusted proxy.
-if os.environ.get("REGISTER_TRUST_PROXY") == "1":
+# Enable proxy SSL header when behind Render or configured reverse proxy
+if os.environ.get("REGISTER_TRUST_PROXY") == "1" or is_render:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"

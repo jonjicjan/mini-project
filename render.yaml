@@ -18,4 +18,4 @@ services:
       - key: REGISTER_TRUST_PROXY
         value: "1"
       - key: REGISTER_ALLOWED_HOSTS
-        value: faculty-attendance-register.onrender.com,localhost,127.0.0.1
+        value: mini-project-2-7lhe.onrender.com,localhost,127.0.0.1
