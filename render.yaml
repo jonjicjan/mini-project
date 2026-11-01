@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: faculty-register
+    runtime: python
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application --workers 2 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: REGISTER_ENV
+        value: production
+      - key: REGISTER_DATA_DIR
+        value: /var/data
+      - key: REGISTER_TRUST_PROXY
+        value: "1"
+      - key: REGISTER_SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    disk:
+      name: register-data
+      mountPath: /var/data
+      sizeGB: 1

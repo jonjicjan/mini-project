@@ -22,15 +22,25 @@ if not SECRET_KEY and DEBUG:
 if len(SECRET_KEY) < 50:
     raise ImproperlyConfigured("REGISTER_SECRET_KEY must contain at least 50 characters.")
 
-ALLOWED_HOSTS = [
-    s.strip()
-    for s in os.environ.get("REGISTER_ALLOWED_HOSTS", "127.0.0.1,localhost" if DEBUG else "").split(
-        ","
-    )
-    if s.strip()
-]
+_raw_hosts = os.environ.get("REGISTER_ALLOWED_HOSTS", "127.0.0.1,localhost" if DEBUG else "")
+if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+    _render_host = os.environ["RENDER_EXTERNAL_HOSTNAME"].strip()
+    _raw_hosts = f"{_raw_hosts},{_render_host}" if _raw_hosts else _render_host
+
+ALLOWED_HOSTS = [s.strip() for s in _raw_hosts.split(",") if s.strip()]
 if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
     raise ImproperlyConfigured("Set explicit REGISTER_ALLOWED_HOSTS; wildcards are not allowed.")
+
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" if not h.startswith(("http://", "https://")) else h
+    for h in ALLOWED_HOSTS
+    if h not in ("127.0.0.1", "localhost")
+]
+if os.environ.get("REGISTER_CSRF_ORIGINS"):
+    CSRF_TRUSTED_ORIGINS.extend(
+        [s.strip() for s in os.environ["REGISTER_CSRF_ORIGINS"].split(",") if s.strip()]
+    )
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -49,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "operations.middleware.MaintenanceMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -116,5 +127,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = DATA_DIR / "static"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1_048_576
