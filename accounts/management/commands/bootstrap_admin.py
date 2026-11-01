@@ -29,11 +29,18 @@ class Command(BaseCommand):
             if options["if_missing"]:
                 return
             raise CommandError("An administrator already exists. Use changepassword for recovery.")
-        username = input("Administrator username: ").strip().lower()
-        display_name = input("Administrator display name: ").strip()
-        password = getpass.getpass("Password (at least 12 characters): ")
-        if password != getpass.getpass("Confirm password: "):
-            raise CommandError("Passwords do not match.")
+        import os
+
+        username = (os.environ.get("ADMIN_USERNAME") or os.environ.get("DJANGO_SUPERUSER_USERNAME") or "").strip().lower()
+        password = os.environ.get("ADMIN_PASSWORD") or os.environ.get("DJANGO_SUPERUSER_PASSWORD") or ""
+        display_name = (os.environ.get("ADMIN_DISPLAY_NAME") or os.environ.get("DJANGO_SUPERUSER_DISPLAY_NAME") or "Administrator").strip()
+
+        if not (username and password):
+            username = input("Administrator username: ").strip().lower()
+            display_name = input("Administrator display name: ").strip()
+            password = getpass.getpass("Password (at least 12 characters): ")
+            if password != getpass.getpass("Confirm password: "):
+                raise CommandError("Passwords do not match.")
         user = model(username=username, display_name=display_name, is_staff=True, is_superuser=True)
         try:
             validate_user(user, password)

@@ -164,7 +164,7 @@
                    autocomplete="current-password" 
                    required 
                    placeholder="Enter your account password">
-            <button type="button" class="login-password-toggle" id="togglePasswordBtn" aria-label="Toggle visibility" title="Show or hide characters">
+            <button type="button" class="login-password-toggle" id="togglePasswordBtn" aria-label="Toggle password visibility" title="Show or hide password">
               <svg id="eyeIconOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -225,7 +225,7 @@
         pwdInput.type = isPassword ? 'text' : 'password';
         eyeOpen.style.display = isPassword ? 'none' : 'block';
         eyeClosed.style.display = isPassword ? 'block' : 'none';
-        toggleBtn.setAttribute('aria-label', isPassword ? 'Hide value' : 'Show value');
+        toggleBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
         pwdInput.focus();
       });
     }
