@@ -1,9 +1,17 @@
+databases:
+  - name: faculty-register-db
+    databaseName: register
+    user: register
+    plan: free
+    region: oregon
+
 services:
   - type: web
     name: faculty-attendance-register
     runtime: python
     plan: free
     region: oregon
+    healthCheckPath: /health/
     buildCommand: "./build.sh"
     startCommand: "gunicorn config.wsgi:application"
     envVars:
@@ -19,3 +27,13 @@ services:
         value: "1"
       - key: REGISTER_ALLOWED_HOSTS
         value: mini-project-2-7lhe.onrender.com,localhost,127.0.0.1
+      - key: REGISTER_DATABASE_URL
+        fromDatabase:
+          name: faculty-register-db
+          property: connectionString
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_DISPLAY_NAME
+        value: Administrator
+      - key: ADMIN_PASSWORD
+        sync: false
