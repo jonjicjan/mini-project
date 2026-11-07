@@ -1,6 +1,7 @@
 import os
 import secrets
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -125,13 +126,33 @@ TEMPLATES = [
         },
     }
 ]
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": DATA_DIR / "register.sqlite3",
-        "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
+# REGISTER_DATABASE_URL selects a PostgreSQL server, e.g.
+# postgresql://user:password@host:5432/register. Without it the installation keeps
+# its self-contained SQLite file at DATA_DIR/register.sqlite3.
+DATABASE_URL = os.environ.get("REGISTER_DATABASE_URL", "").strip()
+if DATABASE_URL:
+    parsed = urlsplit(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": unquote(parsed.path.lstrip("/")),
+            "USER": unquote(parsed.username or ""),
+            "PASSWORD": unquote(parsed.password or ""),
+            "HOST": parsed.hostname or "",
+            "PORT": str(parsed.port or ""),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {"connect_timeout": 5},
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": DATA_DIR / "register.sqlite3",
+            "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
+        }
+    }
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["accounts.backends.FacultyBackend"]
 AUTH_PASSWORD_VALIDATORS = [
