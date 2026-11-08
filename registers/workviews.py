@@ -244,6 +244,54 @@ def workspace(request, register_id, tab):
                     else "Class completed. Eligible unmarked students are now explicitly present.",
                 )
                 return redirect(request.path + "?session=" + request.POST["session_id"])
+            elif action in ("delete_student", "delete_entry") and tab in EDITORS:
+                entry_id = request.POST.get("student_id") or request.POST.get("entry_id") or request.GET.get("edit")
+                if not entry_id:
+                    raise DomainError("No entry selected for deletion.")
+                _, model = EDITORS[tab]
+                instance = get_object_or_404(model, register=register, pk=entry_id)
+
+                from django.db import transaction
+
+                with transaction.atomic():
+                    if tab == "students":
+                        student_usn = instance.usn
+                        student_name = instance.name
+                        instance.attendance.all().delete()
+                        instance.marks.all().delete()
+                        instance.delete()
+                        for idx, remaining in enumerate(
+                            register.students.order_by("serial_number", "id"), start=1
+                        ):
+                            if remaining.serial_number != idx:
+                                remaining.serial_number = idx
+                                remaining.save(update_fields=["serial_number"])
+                        msg = f"Student {student_usn} ({student_name}) has been deleted."
+                    elif tab == "lessons":
+                        instance.sessions.filter(attendance__isnull=True).delete()
+                        if instance.sessions.filter(attendance__isnull=False).exists():
+                            raise DomainError("Cannot delete a lesson that has recorded attendance.")
+                        instance.delete()
+                        for idx, remaining in enumerate(
+                            register.lessons.order_by("original_number", "id"), start=1
+                        ):
+                            if remaining.original_number != idx:
+                                remaining.original_number = idx
+                                remaining.save(update_fields=["original_number"])
+                        msg = "Lesson deleted successfully."
+                    elif tab == "sessions":
+                        instance.attendance.all().delete()
+                        instance.delete()
+                        msg = "Class/test session deleted successfully."
+                    else:
+                        instance.delete()
+                        msg = "Entry deleted successfully."
+
+                    register.revision += 1
+                    register.save(update_fields=["revision", "updated_at"])
+
+                messages.success(request, msg)
+                return redirect("register-workspace", register_id=register.pk, tab=tab)
             elif action == "save" and form and form.is_valid():
                 op = form.operation()
                 if tab in ("students", "lessons"):

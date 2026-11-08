@@ -475,3 +475,28 @@ def test_stale_schedule_preview_is_rejected(faculty, register):
     add_student(faculty, register)
     with pytest.raises(DomainError, match="changed"):
         apply_rebuild(faculty, register.pk, preview=preview, **operation(register))
+
+
+def test_delete_student_removes_records_and_renumbers(client, faculty, register):
+    client.force_login(faculty)
+    s1 = add_student(faculty, register, usn="1KS21CS001", name="First Student")
+    s2 = add_student(faculty, register, usn="1KS21CS002", name="Second Student")
+    register.refresh_from_db()
+    assert register.students.count() == 2
+
+    response = client.post(
+        reverse("register-workspace", kwargs={"register_id": register.pk, "tab": "students"}),
+        {
+            "action": "delete_student",
+            "student_id": str(s1.pk),
+            "expected_revision": register.revision,
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 302
+    register.refresh_from_db()
+    assert register.students.count() == 1
+    remaining = register.students.first()
+    assert remaining.pk == s2.pk
+    assert remaining.serial_number == 1
+

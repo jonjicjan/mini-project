@@ -182,9 +182,20 @@
           {% for value in values %}
           <td>{{ value|default_if_none:'—' }}</td>
           {% endfor %}
-          <td style="text-align: right;">
+          <td style="text-align: right; white-space: nowrap;">
             {% if id and not register.archived_at %}
             <a href="?edit={{ id }}#entry" class="action-btn-link">Edit</a>
+            {% if tab == 'students' %}
+            <form method="post" style="display: inline-block; margin: 0 0 0 6px;" onsubmit="return confirm('Are you sure you want to delete student {{ values.1 }} ({{ values.2 }}) from this register? Recorded attendance and marks for this student will also be removed.');">
+              {% csrf_token %}
+              {{ operation.as_p }}
+              <input type="hidden" name="action" value="delete_student">
+              <input type="hidden" name="student_id" value="{{ id }}">
+              <button type="submit" class="action-btn-link text-danger" style="background: none; border: 1px solid var(--border-subtle); cursor: pointer; color: var(--danger);" title="Delete Student">
+                Delete
+              </button>
+            </form>
+            {% endif %}
             {% endif %}
           </td>
         </tr>
@@ -467,6 +478,12 @@
       </button>
       {% if request.GET.edit %}
       <a href="{% url 'register-workspace' register.pk tab %}" class="button secondary">Cancel Edit</a>
+      {% if tab == 'students' %}
+      <button type="submit" class="button danger" name="action" value="delete_student" formnovalidate onclick="return confirm('Are you sure you want to delete this student from the register? Any marks or attendance records for this student will also be removed.');" style="margin-left: 8px;">
+        Delete Student
+      </button>
+      <input type="hidden" name="student_id" value="{{ request.GET.edit }}">
+      {% endif %}
       {% endif %}
       <span class="form-status" role="status" aria-live="polite"></span>
     </div>
