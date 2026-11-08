@@ -3,6 +3,7 @@ import secrets
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -126,24 +127,23 @@ TEMPLATES = [
         },
     }
 ]
-# REGISTER_DATABASE_URL selects a PostgreSQL server, e.g.
-# postgresql://user:password@host:5432/register. Without it the installation keeps
-# its self-contained SQLite file at DATA_DIR/register.sqlite3.
-DATABASE_URL = os.environ.get("REGISTER_DATABASE_URL", "").strip()
+# REGISTER_DATABASE_URL or DATABASE_URL selects a PostgreSQL server (e.g. Supabase).
+# Without it, the installation keeps its self-contained SQLite file at DATA_DIR/register.sqlite3.
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("REGISTER_DATABASE_URL")
+    or ""
+).strip()
+
 if DATABASE_URL:
-    parsed = urlsplit(DATABASE_URL)
+    is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": unquote(parsed.path.lstrip("/")),
-            "USER": unquote(parsed.username or ""),
-            "PASSWORD": unquote(parsed.password or ""),
-            "HOST": parsed.hostname or "",
-            "PORT": str(parsed.port or ""),
-            "CONN_MAX_AGE": 60,
-            "CONN_HEALTH_CHECKS": True,
-            "OPTIONS": {"connect_timeout": 5},
-        }
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=is_postgres and ("supabase" in DATABASE_URL or "pooler" in DATABASE_URL or not DEBUG),
+        )
     }
 else:
     DATABASES = {
@@ -153,6 +153,10 @@ else:
             "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
         }
     }
+
+# Supabase API credentials
+SUPABASE_URL = os.environ.get("SUPABASE_URL", os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""))
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", os.environ.get("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", ""))
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["accounts.backends.FacultyBackend"]
 AUTH_PASSWORD_VALIDATORS = [

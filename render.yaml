@@ -1,10 +1,3 @@
-databases:
-  - name: faculty-register-db
-    databaseName: register
-    user: register
-    plan: free
-    region: oregon
-
 services:
   - type: web
     name: faculty-attendance-register
@@ -27,10 +20,14 @@ services:
         value: "1"
       - key: REGISTER_ALLOWED_HOSTS
         value: mini-project-2-7lhe.onrender.com,localhost,127.0.0.1
+      - key: DATABASE_URL
+        sync: false
       - key: REGISTER_DATABASE_URL
-        fromDatabase:
-          name: faculty-register-db
-          property: connectionString
+        sync: false
+      - key: SUPABASE_URL
+        value: https://ztgnirjrmjisrmwwoxxw.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_6OD2jLxMvpC4U20G3Ynr9g_sG9XUcV2
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_DISPLAY_NAME
