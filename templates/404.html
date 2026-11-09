@@ -13,7 +13,10 @@
   <p class="eyebrow">404 NOT FOUND</p>
   <h1>Resource or Page Not Found</h1>
   <p class="dialog-explanation">The requested URL or course register could not be located. It may have been archived, relocated, or you might have entered an incorrect link.</p>
-  <div class="form-actions" style="justify-content: center; margin-top: 24px;">
+  <div class="form-actions" style="justify-content: center; margin-top: 24px; gap: 12px; flex-wrap: wrap;">
+    <button onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{% url 'register-list' %}'; }" class="button secondary" type="button">
+      Go to Previous Page
+    </button>
     <a href="{% url 'register-list' %}" class="button primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
       <span>Return to My Registers</span>

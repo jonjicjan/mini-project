@@ -1,9 +1,11 @@
 from datetime import date
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
-from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -92,9 +94,8 @@ def untoken(value, register, actor):
 def workspace(request, register_id, tab):
     register = owned_register(request.user, register_id)
     if tab not in dict(TABS):
-        from django.http import Http404
-
         raise Http404
+
     action = request.POST.get("action", "save")
     operation = MutationForm(request.POST or None, revision=register.revision)
     context = {
@@ -109,11 +110,16 @@ def workspace(request, register_id, tab):
     form = None
     if tab in EDITORS:
         form_class, model = EDITORS[tab]
-        instance = (
-            get_object_or_404(model, register=register, pk=request.GET["edit"])
-            if request.GET.get("edit")
-            else None
-        )
+        edit_id = request.GET.get("edit")
+        instance = None
+        if edit_id:
+            try:
+                instance = model.objects.filter(register=register, pk=edit_id).first()
+            except (ValueError, ValidationError):
+                instance = None
+            if not instance:
+                messages.warning(request, "The requested record was not found or was already removed.")
+                return redirect("register-workspace", register_id=register.pk, tab=tab)
         initial = {
             "eligible_from": register.term_start,
             "serial_number": register.students.count() + 1,
@@ -249,7 +255,13 @@ def workspace(request, register_id, tab):
                 if not entry_id:
                     raise DomainError("No entry selected for deletion.")
                 _, model = EDITORS[tab]
-                instance = get_object_or_404(model, register=register, pk=entry_id)
+                try:
+                    instance = model.objects.filter(register=register, pk=entry_id).first()
+                except (ValueError, ValidationError):
+                    instance = None
+                if not instance:
+                    messages.warning(request, "This record was not found or has already been deleted.")
+                    return redirect("register-workspace", register_id=register.pk, tab=tab)
 
                 from django.db import transaction
 
@@ -326,8 +338,15 @@ def workspace(request, register_id, tab):
                 return redirect("register-workspace", register_id=register.pk, tab=tab)
             else:
                 status = 422
-        except (DomainError, ValueError, KeyError) as error:
-            context["error"] = str(error)
+        except (DomainError, ValueError, KeyError, ValidationError, Http404) as error:
+            if isinstance(error, Http404):
+                context["error"] = "The requested record was not found or has been removed."
+            elif isinstance(error, ValidationError):
+                context["error"] = "Check the entered values."
+                if hasattr(error, "message_dict"):
+                    context["error_details"] = error.message_dict
+            else:
+                context["error"] = str(error)
             status = error.status if isinstance(error, DomainError) else 422
             if isinstance(error, DomainError):
                 context["error_details"] = error.body.get("field_errors", {})

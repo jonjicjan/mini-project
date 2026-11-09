@@ -108,7 +108,13 @@ def save_rows(register, table, rows):
                 raise DomainError("Lesson numbers must be positive integers.") from None
 
         if values.get("id"):
-            instance = get_object_or_404(model, register=register, pk=values.pop("id"))
+            raw_id = values.pop("id")
+            try:
+                instance = model.objects.filter(register=register, pk=raw_id).first()
+            except (ValueError, ValidationError):
+                instance = None
+            if not instance:
+                raise DomainError(f"Record with ID '{raw_id}' was not found or has been deleted.")
         elif table == "timetable":
             w_int = parse_weekday_value(values["weekday"])
             p_str = str(values["period"]).strip()

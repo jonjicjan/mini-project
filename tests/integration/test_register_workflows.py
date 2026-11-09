@@ -500,3 +500,37 @@ def test_delete_student_removes_records_and_renumbers(client, faculty, register)
     assert remaining.pk == s2.pk
     assert remaining.serial_number == 1
 
+
+def test_invalid_or_deleted_edit_id_does_not_404(client, faculty, register):
+    client.force_login(faculty)
+    # 1. Non-existent UUID
+    response = client.get(
+        reverse("register-workspace", args=[register.pk, "students"]) + f"?edit={uuid.uuid4()}"
+    )
+    assert response.status_code == 302
+    assert response.url == reverse("register-workspace", args=[register.pk, "students"])
+
+    # 2. Malformed ID string
+    response = client.get(
+        reverse("register-workspace", args=[register.pk, "students"]) + "?edit=not-a-valid-uuid"
+    )
+    assert response.status_code == 302
+    assert response.url == reverse("register-workspace", args=[register.pk, "students"])
+
+
+def test_delete_already_deleted_student_does_not_404(client, faculty, register):
+    client.force_login(faculty)
+    fake_id = uuid.uuid4()
+    response = client.post(
+        reverse("register-workspace", args=[register.pk, "students"]),
+        {
+            "action": "delete_student",
+            "student_id": str(fake_id),
+            "expected_revision": register.revision,
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 302
+    assert response.url == reverse("register-workspace", args=[register.pk, "students"])
+
+
