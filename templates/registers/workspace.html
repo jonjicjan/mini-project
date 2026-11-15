@@ -210,6 +210,495 @@
 </section>
 {% endif %}
 
+{% if tab == 'timetable' and not register.archived_at %}
+<!-- UPLOAD TIMETABLE (IMAGE OR PDF) SECTION -->
+<section class="panel spaced timetable-ocr-panel" style="border: 2px dashed #059669; background: #f0fdf4; border-radius: 14px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.06);">
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #d1fae5; color: #065f46;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </span>
+        <h2 style="margin: 0; font-size: 19px; color: #065f46;">Upload Timetable (Image or PDF)</h2>
+      </div>
+      <p class="muted" style="margin: 0; font-size: 13px; color: #047857;">Upload a photo, screenshot, or PDF of your class timetable. The system will automatically scan, extract all period timings and days, and let you review before adding to your register.</p>
+    </div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <span class="badge" style="background: #10b981; color: white;">PDF Supported</span>
+      <span class="badge" style="background: #059669; color: white;">Image OCR (JPG/PNG)</span>
+      <span class="badge badge-subtle">Auto-Slot Extraction</span>
+    </div>
+  </div>
+
+  <!-- Filter & Options Bar -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px; padding: 14px; background: white; border-radius: 10px; border: 1px solid #d1fae5;">
+    <div>
+      <label for="tt-subject-filter" style="display: block; font-weight: 700; font-size: 12px; color: #065f46; margin-bottom: 4px;">Subject Code / Keyword Filter:</label>
+      <input type="text" id="tt-subject-filter" value="{{ register.subject_code|default:'' }}" placeholder="e.g. {{ register.subject_code|default:'21CS51' }}" style="width: 100%; padding: 8px 12px; border: 1px solid #a7f3d0; border-radius: 6px; font-weight: 600;">
+      <small style="display: block; font-size: 11px; color: #059669; margin-top: 3px;">Extracts slots matching this subject. Clear to extract all slots.</small>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 700; font-size: 12px; color: #065f46; margin-bottom: 4px;">Term Start (Effective From):</label>
+      <input type="date" id="tt-term-start" value="{{ register.term_start|date:'Y-m-d' }}" style="width: 100%; padding: 8px 12px; border: 1px solid #a7f3d0; border-radius: 6px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 700; font-size: 12px; color: #065f46; margin-bottom: 4px;">Term End (Effective To):</label>
+      <input type="date" id="tt-term-end" value="{{ register.term_end|date:'Y-m-d' }}" style="width: 100%; padding: 8px 12px; border: 1px solid #a7f3d0; border-radius: 6px;">
+    </div>
+  </div>
+
+  <!-- Drag & Drop Zone -->
+  <div id="tt-dropzone" style="border: 2px dashed #059669; background: white; border-radius: 12px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease-in-out; margin-bottom: 16px;">
+    <input type="file" id="tt-file-input" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,.csv,.tsv,.txt" style="display: none;">
+    <div id="tt-dropzone-prompt">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8" style="margin-bottom: 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      <p style="margin: 0 0 6px 0; font-weight: 700; font-size: 15px; color: #065f46;">Click to upload or drag & drop your timetable file here</p>
+      <p style="margin: 0; font-size: 12px; color: #059669;">Supported formats: <strong>PDF documents, PNG, JPG, JPEG, WebP</strong> images</p>
+    </div>
+    <div id="tt-file-info" style="display: none; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;">
+      <div id="tt-preview-thumb-box" style="display: none; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #d1fae5;">
+        <img id="tt-preview-thumb" src="" alt="Timetable preview" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+      <div style="text-align: left;">
+        <strong id="tt-file-name" style="font-size: 14px; color: #065f46; display: block;">document.pdf</strong>
+        <span id="tt-file-size" style="font-size: 12px; color: #059669;">245 KB</span>
+      </div>
+      <button type="button" id="tt-change-file-btn" class="button secondary small" style="margin-left: 10px;">Change File</button>
+    </div>
+  </div>
+
+  <!-- Action & Progress Area -->
+  <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px;">
+    <button type="button" id="tt-scan-btn" class="button primary" style="background: #059669; border-color: #047857; padding: 10px 22px; font-weight: 700;" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      <span>Scan & Extract Timetable</span>
+    </button>
+    <div id="tt-status-box" style="display: none; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #065f46;">
+      <div class="tt-spinner" style="width: 18px; height: 18px; border: 3px solid #d1fae5; border-top: 3px solid #059669; border-radius: 50%; animation: tt-spin 0.8s linear infinite;"></div>
+      <span id="tt-status-msg">Scanning timetable...</span>
+    </div>
+  </div>
+
+  <div id="tt-progress-container" style="display: none; margin-bottom: 16px;">
+    <div style="height: 8px; background: #d1fae5; border-radius: 4px; overflow: hidden;">
+      <div id="tt-progress-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.25s ease;"></div>
+    </div>
+    <div id="tt-progress-text" style="font-size: 11px; color: #065f46; margin-top: 4px; text-align: right;">0%</div>
+  </div>
+
+  <!-- Extracted Results Confirmation Container -->
+  <div id="tt-results-box" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 12px; border: 1px solid #10b981; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <h3 style="margin: 0; font-size: 16px; color: #065f46;">Review Extracted Slots</h3>
+        <p class="muted" style="margin: 2px 0 0; font-size: 12px;">Review and make any necessary adjustments before applying to this course register.</p>
+      </div>
+      <span id="tt-slots-badge" class="badge" style="background: #10b981; color: white;">0 Slots Found</span>
+    </div>
+
+    <div class="table-scroll" style="margin-bottom: 14px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #ecfdf5; border-bottom: 2px solid #a7f3d0;">
+            <th style="padding: 10px; font-size: 12px; color: #065f46;">Day of Week</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 90px;">Period</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46;">Start Time</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46;">End Time</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46;">Effective From</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46;">Effective To</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 60px; text-align: center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tt-slots-tbody">
+          <!-- Dynamic slot rows populated via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <button type="button" id="tt-add-slot-row-btn" class="button secondary small" style="border-color: #a7f3d0; color: #065f46;">
+        + Add Another Slot
+      </button>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="tt-cancel-results-btn" class="button secondary">Cancel</button>
+        <button type="button" id="tt-save-slots-btn" class="button primary" style="background: #059669; border-color: #047857;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Save Extracted Slots to Register</span>
+        </button>
+      </div>
+    </div>
+
+    <details style="margin-top: 16px; font-size: 12px; color: #065f46;">
+      <summary style="cursor: pointer; font-weight: 600;">View Raw Scanned Text</summary>
+      <pre id="tt-raw-text-box" style="margin-top: 8px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; white-space: pre-wrap; max-height: 180px; overflow-y: auto; font-family: monospace; font-size: 11px;"></pre>
+    </details>
+  </div>
+</section>
+
+<style>
+@keyframes tt-spin { to { transform: rotate(360deg); } }
+#tt-dropzone.dragover { background: #ecfdf5 !important; border-color: #10b981 !important; transform: scale(1.01); }
+.tt-slot-input { width: 100%; padding: 6px 8px; border: 1px solid #d1fae5; border-radius: 6px; font-size: 13px; }
+.tt-slot-input:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const dropzone = document.getElementById("tt-dropzone");
+  const fileInput = document.getElementById("tt-file-input");
+  const scanBtn = document.getElementById("tt-scan-btn");
+  const statusBox = document.getElementById("tt-status-box");
+  const statusMsg = document.getElementById("tt-status-msg");
+  const progressContainer = document.getElementById("tt-progress-container");
+  const progressBar = document.getElementById("tt-progress-bar");
+  const progressText = document.getElementById("tt-progress-text");
+  const resultsBox = document.getElementById("tt-results-box");
+  const slotsTbody = document.getElementById("tt-slots-tbody");
+  const slotsBadge = document.getElementById("tt-slots-badge");
+  const rawTextBox = document.getElementById("tt-raw-text-box");
+  const saveSlotsBtn = document.getElementById("tt-save-slots-btn");
+  const addSlotBtn = document.getElementById("tt-add-slot-row-btn");
+  const cancelBtn = document.getElementById("tt-cancel-results-btn");
+  const changeFileBtn = document.getElementById("tt-change-file-btn");
+  const subjectFilterInput = document.getElementById("tt-subject-filter");
+  const termStartInput = document.getElementById("tt-term-start");
+  const termEndInput = document.getElementById("tt-term-end");
+
+  if (!dropzone || !fileInput || !scanBtn) return;
+
+  let selectedFile = null;
+  const weekdaysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  function getCsrfToken() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (el) return el.value;
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+  }
+
+  // Drag and Drop handlers
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelected(e.dataTransfer.files[0]);
+    }
+  });
+  dropzone.addEventListener('click', (e) => {
+    if (e.target !== changeFileBtn) {
+      fileInput.click();
+    }
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      handleFileSelected(fileInput.files[0]);
+    }
+  });
+  if (changeFileBtn) {
+    changeFileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
+  function handleFileSelected(file) {
+    selectedFile = file;
+    document.getElementById("tt-dropzone-prompt").style.display = "none";
+    document.getElementById("tt-file-info").style.display = "flex";
+    document.getElementById("tt-file-name").textContent = file.name;
+    document.getElementById("tt-file-size").textContent = (file.size / 1024).toFixed(1) + " KB";
+
+    const thumbBox = document.getElementById("tt-preview-thumb-box");
+    const thumbImg = document.getElementById("tt-preview-thumb");
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        thumbImg.src = e.target.result;
+        thumbBox.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    } else {
+      thumbBox.style.display = "none";
+    }
+    scanBtn.disabled = false;
+  }
+
+  // Scanning logic
+  scanBtn.addEventListener("click", async function () {
+    if (!selectedFile) return;
+
+    scanBtn.disabled = true;
+    statusBox.style.display = "flex";
+    progressContainer.style.display = "block";
+    progressBar.style.width = "10%";
+    progressText.textContent = "10%";
+    resultsBox.style.display = "none";
+
+    try {
+      const isPdf = selectedFile.name.toLowerCase().endsWith(".pdf");
+      const isImage = selectedFile.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp)$/i.test(selectedFile.name);
+
+      if (isPdf || !isImage) {
+        statusMsg.textContent = "Uploading & extracting PDF timetable text...";
+        progressBar.style.width = "40%";
+        progressText.textContent = "40%";
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
+
+        const resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCsrfToken() },
+          body: formData,
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.status !== "ok") {
+          throw new Error(data.message || "Failed to parse timetable file.");
+        }
+        progressBar.style.width = "100%";
+        progressText.textContent = "100%";
+        renderSlots(data.slots, data.raw_text);
+      } else {
+        // Image file -> Load Tesseract.js client OCR
+        statusMsg.textContent = "Loading OCR recognition engine...";
+        progressBar.style.width = "25%";
+        progressText.textContent = "25%";
+
+        await loadTesseractScript();
+
+        statusMsg.textContent = "Scanning timetable image with OCR...";
+        progressBar.style.width = "45%";
+        progressText.textContent = "45%";
+
+        const worker = await Tesseract.createWorker("eng", 1, {
+          logger: m => {
+            if (m.status === "recognizing text" && m.progress) {
+              const pct = Math.round(m.progress * 100);
+              progressBar.style.width = `${40 + Math.round(pct * 0.45)}%`;
+              progressText.textContent = `${40 + Math.round(pct * 0.45)}%`;
+              statusMsg.textContent = `Recognizing timetable text (${pct}%)...`;
+            }
+          }
+        });
+        
+        const ret = await worker.recognize(selectedFile);
+        await worker.terminate();
+
+        const recognizedText = ret.data.text;
+        statusMsg.textContent = "Parsing extracted timetable schedule...";
+        progressBar.style.width = "90%";
+        progressText.textContent = "90%";
+
+        const formData = new FormData();
+        formData.append("raw_text", recognizedText);
+        formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
+
+        const resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
+          method: "POST",
+          headers: { "X-CSRFToken": getCsrfToken() },
+          body: formData,
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.status !== "ok") {
+          throw new Error(data.message || "Failed to parse timetable slots.");
+        }
+        progressBar.style.width = "100%";
+        progressText.textContent = "100%";
+        renderSlots(data.slots, data.raw_text || recognizedText);
+      }
+    } catch (err) {
+      alert("Error processing timetable: " + err.message);
+    } finally {
+      scanBtn.disabled = false;
+      statusBox.style.display = "none";
+      setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
+    }
+  });
+
+  function loadTesseractScript() {
+    return new Promise((resolve, reject) => {
+      if (window.Tesseract) {
+        resolve();
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Unable to load OCR engine. Please check your internet connection or upload as a PDF."));
+      document.head.appendChild(s);
+    });
+  }
+
+  function renderSlots(slots, rawText) {
+    slotsTbody.innerHTML = "";
+    rawTextBox.textContent = rawText || "No raw text available.";
+
+    const defaultFrom = termStartInput ? termStartInput.value : "";
+    const defaultTo = termEndInput ? termEndInput.value : "";
+
+    if (!slots || slots.length === 0) {
+      slotsBadge.textContent = "0 Slots Found";
+      slotsBadge.style.background = "#ef4444";
+      slotsTbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+            No teaching slots matching "${subjectFilterInput ? subjectFilterInput.value : 'all'}" could be detected automatically.<br>
+            <small>Try clearing the Subject Code filter or click <strong>+ Add Another Slot</strong> below to add your slots.</small>
+          </td>
+        </tr>`;
+    } else {
+      slotsBadge.textContent = slots.length + " Slots Found";
+      slotsBadge.style.background = "#10b981";
+
+      slots.forEach((s) => {
+        appendSlotRow({
+          weekday: s.weekday || "Monday",
+          period: s.period || "1",
+          start_time: s.start_time || "09:00",
+          end_time: s.end_time || "10:00",
+          effective_from: s.effective_from || defaultFrom,
+          effective_to: s.effective_to || defaultTo,
+        });
+      });
+    }
+
+    resultsBox.style.display = "block";
+    resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function appendSlotRow(slot) {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid #e2e8f0";
+
+    const defaultFrom = termStartInput ? termStartInput.value : "";
+    const defaultTo = termEndInput ? termEndInput.value : "";
+
+    const dayOptions = weekdaysList.map(d =>
+      `<option value="${d}" ${d.toLowerCase() === (slot.weekday||'').toLowerCase() ? 'selected' : ''}>${d}</option>`
+    ).join("");
+
+    tr.innerHTML = `
+      <td style="padding: 8px;">
+        <select class="tt-slot-input tt-slot-weekday">${dayOptions}</select>
+      </td>
+      <td style="padding: 8px;">
+        <input type="text" class="tt-slot-input tt-slot-period" value="${slot.period || '1'}" style="text-align: center;">
+      </td>
+      <td style="padding: 8px;">
+        <input type="time" class="tt-slot-input tt-slot-start" value="${slot.start_time || '09:00'}">
+      </td>
+      <td style="padding: 8px;">
+        <input type="time" class="tt-slot-input tt-slot-end" value="${slot.end_time || '10:00'}">
+      </td>
+      <td style="padding: 8px;">
+        <input type="date" class="tt-slot-input tt-slot-eff-from" value="${slot.effective_from || defaultFrom}">
+      </td>
+      <td style="padding: 8px;">
+        <input type="date" class="tt-slot-input tt-slot-eff-to" value="${slot.effective_to || defaultTo}">
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <button type="button" class="action-btn-link text-danger tt-delete-row-btn" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; font-weight: bold;" title="Remove Slot">✕</button>
+      </td>
+    `;
+
+    tr.querySelector(".tt-delete-row-btn").addEventListener("click", () => {
+      tr.remove();
+      updateSlotsBadge();
+    });
+
+    slotsTbody.appendChild(tr);
+    updateSlotsBadge();
+  }
+
+  function updateSlotsBadge() {
+    const count = slotsTbody.querySelectorAll("tr").length;
+    slotsBadge.textContent = count + " Slots";
+  }
+
+  addSlotBtn.addEventListener("click", () => {
+    if (slotsTbody.querySelector("td[colspan]")) {
+      slotsTbody.innerHTML = "";
+    }
+    appendSlotRow({
+      weekday: "Monday",
+      period: "1",
+      start_time: "09:00",
+      end_time: "10:00",
+      effective_from: termStartInput ? termStartInput.value : "",
+      effective_to: termEndInput ? termEndInput.value : "",
+    });
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    resultsBox.style.display = "none";
+  });
+
+  saveSlotsBtn.addEventListener("click", async () => {
+    const rows = slotsTbody.querySelectorAll("tr");
+    const slotsToSave = [];
+
+    rows.forEach(tr => {
+      const weekdayEl = tr.querySelector(".tt-slot-weekday");
+      if (!weekdayEl) return;
+      const periodEl = tr.querySelector(".tt-slot-period");
+      const startEl = tr.querySelector(".tt-slot-start");
+      const endEl = tr.querySelector(".tt-slot-end");
+      const fromEl = tr.querySelector(".tt-slot-eff-from");
+      const toEl = tr.querySelector(".tt-slot-eff-to");
+
+      slotsToSave.push({
+        weekday: weekdayEl.value,
+        period: periodEl.value.trim(),
+        start_time: startEl.value.trim(),
+        end_time: endEl.value.trim(),
+        effective_from: fromEl.value || null,
+        effective_to: toEl.value || null,
+      });
+    });
+
+    if (slotsToSave.length === 0) {
+      alert("No slots to save. Please add at least one timetable slot.");
+      return;
+    }
+
+    saveSlotsBtn.disabled = true;
+    saveSlotsBtn.textContent = "Saving to Timetable...";
+
+    try {
+      const resp = await fetch("{% url 'timetable-apply-slots' register.pk %}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCsrfToken(),
+        },
+        body: JSON.stringify({ slots: slotsToSave }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.status !== "ok") {
+        throw new Error(data.message || "Failed to save timetable slots.");
+      }
+      window.location.href = data.redirect || window.location.href;
+    } catch (err) {
+      alert("Error saving slots: " + err.message);
+      saveSlotsBtn.disabled = false;
+      saveSlotsBtn.textContent = "Save Extracted Slots to Register";
+    }
+  });
+});
+</script>
+{% endif %}
+
 {% if tab == 'sessions' and not register.archived_at %}
 <section class="panel spaced">
   <div class="panel-heading">

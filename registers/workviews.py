@@ -1,11 +1,13 @@
 from datetime import date
+import json
+import uuid
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -21,10 +23,11 @@ from django.urls import reverse
 from exports.models import ExportRecord
 from exports.preview import prepare_booklet_preview
 from exports.snapshot import build_export_snapshot, create_export
-from registers.entries import apply_paste
+from registers.entries import apply_paste, mutate_register, save_rows
 from registers.models import Enrollment, LessonPlanRow
 from registers.paste import FIELDS, preview_paste
 from registers.services import owned_register
+from scheduling.timetable_parser import extract_text_from_pdf, parse_timetable_text
 from scheduling.models import Holiday, ScheduleConflict, Session, TimetableEntry
 from scheduling.services import (
     apply_rebuild,
@@ -557,3 +560,108 @@ def export_preview(request, export_id):
     return redirect(
         f"{reverse('register-workspace', args=[record.register.pk, 'preview'])}?export={record.pk}"
     )
+
+
+@login_required
+@never_cache
+@require_http_methods(["POST"])
+def parse_timetable_upload(request, register_id):
+    """Process an uploaded timetable file (PDF, text) or client-side OCR raw text.
+    
+    Parses day of week, periods, and time windows into structured timetable slots.
+    """
+    register = owned_register(request.user, register_id)
+    subject_filter = request.POST.get("subject_filter", "").strip() or register.subject_code or ""
+    raw_text = request.POST.get("raw_text", "").strip()
+    uploaded_file = request.FILES.get("file")
+
+    if uploaded_file:
+        filename = uploaded_file.name.lower()
+        if filename.endswith(".pdf"):
+            try:
+                extracted = extract_text_from_pdf(uploaded_file)
+                raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
+            except Exception as e:
+                return JsonResponse({"status": "error", "message": f"Could not read PDF: {e}"}, status=400)
+        elif any(filename.endswith(ext) for ext in [".txt", ".csv", ".tsv"]):
+            try:
+                extracted = uploaded_file.read().decode("utf-8", errors="ignore")
+                raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
+            except Exception as e:
+                return JsonResponse({"status": "error", "message": f"Could not read text file: {e}"}, status=400)
+
+    if not raw_text:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "No text detected. For image files, please ensure OCR scanning completed or paste the timetable text.",
+            },
+            status=400,
+        )
+
+    parsed = parse_timetable_text(
+        raw_text,
+        subject_filter=subject_filter,
+        term_start=register.term_start,
+        term_end=register.term_end,
+    )
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "slots": parsed["slots"],
+            "total": parsed["total_extracted"],
+            "raw_text": raw_text[:3000],
+            "subject_filter": subject_filter,
+        }
+    )
+
+
+@login_required
+@never_cache
+@require_http_methods(["POST"])
+def apply_timetable_slots(request, register_id):
+    """Save user-reviewed timetable slots into the register atomically."""
+    register = owned_register(request.user, register_id)
+    if register.archived_at:
+        return JsonResponse({"status": "error", "message": "Restore this register before changing its records."}, status=400)
+
+    try:
+        data = json.loads(request.body)
+        slots = data.get("slots", [])
+    except Exception:
+        slots = []
+
+    if not slots or not isinstance(slots, list):
+        return JsonResponse({"status": "error", "message": "No valid slots provided to save."}, status=400)
+
+    sanitized_slots = []
+    for s in slots:
+        sanitized_slots.append({
+            "weekday": s.get("weekday"),
+            "period": str(s.get("period", "1")).strip(),
+            "start_time": s.get("start_time"),
+            "end_time": s.get("end_time"),
+            "effective_from": s.get("effective_from") or None,
+            "effective_to": s.get("effective_to") or None,
+        })
+
+    try:
+        mutate_register(
+            request.user,
+            register.pk,
+            action="apply_extracted_timetable",
+            values={"table": "timetable", "rows": sanitized_slots},
+            change=lambda r: save_rows(r, "timetable", sanitized_slots),
+            expected_revision=register.revision,
+            request_id=uuid.uuid4(),
+        )
+        messages.success(request, f"Successfully saved {len(sanitized_slots)} timetable slots from uploaded document!")
+        return JsonResponse({
+            "status": "ok",
+            "count": len(sanitized_slots),
+            "redirect": reverse("register-workspace", args=[register.pk, "timetable"]),
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+

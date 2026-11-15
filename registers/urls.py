@@ -8,6 +8,16 @@ urlpatterns = [
         workviews.workspace,
         name="register-workspace",
     ),
+    path(
+        "registers/<uuid:register_id>/timetable/upload-ocr/",
+        workviews.parse_timetable_upload,
+        name="timetable-upload-ocr",
+    ),
+    path(
+        "registers/<uuid:register_id>/timetable/apply-slots/",
+        workviews.apply_timetable_slots,
+        name="timetable-apply-slots",
+    ),
     path("exports/<uuid:export_id>/download/", workviews.download_export, name="export-download"),
     path("exports/<uuid:export_id>/preview/", workviews.export_preview, name="export-preview"),
     path("", views.register_list, name="register-list"),

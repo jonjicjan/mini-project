@@ -79,6 +79,8 @@ pydantic==2.14.3
     #   supabase-auth
 pydantic-core==2.50.4
     # via pydantic
+pypdf==7.1.0
+    # via -r requirements.in
 pyjwt==2.15.1
     # via supabase-auth
 python-docx==1.2.0

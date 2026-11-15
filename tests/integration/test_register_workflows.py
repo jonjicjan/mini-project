@@ -534,3 +534,48 @@ def test_delete_already_deleted_student_does_not_404(client, faculty, register):
     assert response.url == reverse("register-workspace", args=[register.pk, "students"])
 
 
+def test_parse_timetable_upload_ocr_text_and_apply_slots(client, faculty, register):
+    client.force_login(faculty)
+    ocr_raw = """
+    DAY / TIME    09:00-10:00    10:00-11:00    11:15-12:15
+    MONDAY        21CS51         MATH           PHYSICS
+    WEDNESDAY     CHEMISTRY      21CS51         ENGLISH
+    FRIDAY        CIVIL          MECHANICAL     21CS51
+    """
+    url_parse = reverse("timetable-upload-ocr", args=[register.pk])
+    resp_parse = client.post(
+        url_parse,
+        {"raw_text": ocr_raw, "subject_filter": "21CS51"},
+    )
+    assert resp_parse.status_code == 200
+    data = resp_parse.json()
+    assert data["status"] == "ok"
+    assert data["total"] == 3
+    assert len(data["slots"]) == 3
+    assert data["slots"][0]["weekday"] == "Monday"
+    assert data["slots"][0]["period"] == "1"
+    assert data["slots"][0]["start_time"] == "09:00"
+    assert data["slots"][0]["end_time"] == "10:00"
+
+    # Now apply the extracted slots
+    url_apply = reverse("timetable-apply-slots", args=[register.pk])
+    import json
+    resp_apply = client.post(
+        url_apply,
+        data=json.dumps({"slots": data["slots"]}),
+        content_type="application/json",
+    )
+    assert resp_apply.status_code == 200
+    res = resp_apply.json()
+    assert res["status"] == "ok"
+    assert res["count"] == 3
+
+    # Verify slots exist in database for this register
+    assert register.timetable_entries.count() == 3
+    mon = register.timetable_entries.get(weekday=0)
+    assert mon.period == "1"
+    assert mon.start_time == time(9, 0)
+    assert mon.end_time == time(10, 0)
+
+
+
