@@ -127,16 +127,23 @@ TEMPLATES = [
         },
     }
 ]
-# REGISTER_DATABASE_URL or DATABASE_URL selects a PostgreSQL server (e.g. Supabase).
-# Without it, the installation keeps its self-contained SQLite file at DATA_DIR/register.sqlite3.
+# Database Configuration: Supabase PostgreSQL exclusively
+# SQLite has been removed; the application strictly uses Supabase PostgreSQL.
 DATABASE_URL = (
     os.environ.get("DATABASE_URL")
     or os.environ.get("REGISTER_DATABASE_URL")
     or ""
 ).strip()
 
-if DATABASE_URL:
-    is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
+if not DATABASE_URL:
+    raise ImproperlyConfigured(
+        "DATABASE_URL is required. SQLite has been removed; Supabase PostgreSQL is the sole supported database. "
+        "Please set DATABASE_URL in your .env or environment variables "
+        "(e.g. postgresql://postgres.ztgnirjrmjisrmwwoxxw:your_password@aws-0-ap-south-1.pooler.supabase.com:5432/postgres)."
+    )
+
+is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
+try:
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
@@ -145,14 +152,11 @@ if DATABASE_URL:
             ssl_require=is_postgres and ("supabase" in DATABASE_URL or "pooler" in DATABASE_URL or not DEBUG),
         )
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": DATA_DIR / "register.sqlite3",
-            "OPTIONS": {"timeout": 5, "transaction_mode": "IMMEDIATE"},
-        }
-    }
+except Exception as exc:
+    raise ImproperlyConfigured(
+        f"Invalid DATABASE_URL ({exc}). If your database password contains special characters, "
+        "make sure they are URL-encoded (e.g. using urllib.parse.quote_plus)."
+    ) from exc
 
 # Supabase API credentials
 SUPABASE_URL = os.environ.get("SUPABASE_URL", os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""))

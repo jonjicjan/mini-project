@@ -32,7 +32,7 @@ This application replaces error-prone pen-and-paper tracking and rigid cloud ERP
 - 👥 **Interactive Attendance Grid**: Real-time running attendance counter, explicit absence (`Red A`) recording, student enrollment eligibility enforcement, and an atomic "Complete Class" operation.
 - 📊 **Configurable CIE Scoring Engine**: Flexible assessment rules supporting assignment and internal test weightages, best-of-$N$ test aggregation, absence handling (`AB`), and precision rounding.
 - 📄 **Exact Physical Booklet DOCX Synthesis**: Programmatically renders complete 12-page booklets adhering to custom physical paper dimensions (210 × 307 mm full pages and 105 × 307 mm half-leaves) with official institution headers and cryptographic SHA-256 data snapshots.
-- 🔒 **Local & Privacy-Preserving**: Runs on your own network or server — PostgreSQL for shared deployments, a self-contained SQLite file for a single PC. No third-party cloud data transmission, recurring subscriptions, or external services.
+- 🔒 **Cloud & Database Scalability**: Powered by Supabase PostgreSQL (IPv4 Pooler) for production and team deployments, ensuring high reliability, transaction safety, and secure connection pooling.
 
 ---
 
@@ -41,7 +41,7 @@ This application replaces error-prone pen-and-paper tracking and rigid cloud ERP
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Backend Framework** | Python 3.12, Django 5.x | Core business logic, ORM, authentication, and routing |
-| **Database** | PostgreSQL 16 (or SQLite 3 at `var/register.sqlite3`) | Server database when `REGISTER_DATABASE_URL` is set, otherwise a zero-configuration local SQLite file |
+| **Database** | Supabase PostgreSQL 16 (via `DATABASE_URL`) | Production cloud PostgreSQL database via Supabase IPv4 connection pooler |
 | **Document Synthesis** | `python-docx` | Custom XML-level Word document generation with exact twip geometry |
 | **Frontend** | Vanilla HTML5, CSS3, Modern JavaScript | Responsive UI, print preview, and fast client-side paste validation |
 | **Test Suites** | `pytest`, `pytest-django`, Playwright | Unit math tests, database integration tests, and headless browser tests |
@@ -237,7 +237,7 @@ Attendance_Register/
 │   ├── print-guide.md                 # Physical printing, margins, and paper assembly instructions
 │   ├── windows-setup.md               # Production Windows server and HTTPS deployment
 │   └── verification.md                # Test execution logs and evidence records
-└── var/                               # Local SQLite database and backups (git-ignored)
+└── var/                               # Local runtime caches, session exports, and logs (git-ignored)
 ```
 
 ---

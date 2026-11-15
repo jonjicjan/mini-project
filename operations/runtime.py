@@ -37,8 +37,8 @@ def runtime_config(data_dir):
         raise ValueError("Caddy checksum changed. Verify the approved binary before starting.")
     if len((root / "secret.key").read_text().strip()) < 50:
         raise ValueError("The installation secret is missing or too short.")
-    if not (root / "register.sqlite3").is_file() or not (root / "static").is_dir():
-        raise ValueError("Run setup, migrations and collectstatic first.")
+    if not (root / "static").is_dir():
+        raise ValueError("Run collectstatic first.")
     config["data_dir"] = str(root)
     config["caddy_path"] = str(binary)
     return config
