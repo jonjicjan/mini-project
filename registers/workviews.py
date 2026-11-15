@@ -27,7 +27,11 @@ from registers.entries import apply_paste, mutate_register, save_rows
 from registers.models import Enrollment, LessonPlanRow
 from registers.paste import FIELDS, preview_paste
 from registers.services import owned_register
-from scheduling.timetable_parser import extract_text_from_pdf, parse_timetable_text
+from scheduling.timetable_parser import (
+    extract_text_from_pdf,
+    parse_timetable_from_image,
+    parse_timetable_text,
+)
 from scheduling.models import Holiday, ScheduleConflict, Session, TimetableEntry
 from scheduling.services import (
     apply_rebuild,
@@ -583,6 +587,27 @@ def parse_timetable_upload(request, register_id):
                 raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
             except Exception as e:
                 return JsonResponse({"status": "error", "message": f"Could not read PDF: {e}"}, status=400)
+        elif any(filename.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp"]):
+            try:
+                parsed = parse_timetable_from_image(
+                    uploaded_file,
+                    subject_filter=subject_filter,
+                    term_start=register.term_start,
+                    term_end=register.term_end,
+                )
+                if parsed.get("slots"):
+                    return JsonResponse(
+                        {
+                            "status": "ok",
+                            "slots": parsed["slots"],
+                            "total": parsed["total_extracted"],
+                            "raw_text": parsed.get("raw_text", "")[:3000],
+                            "subject_filter": subject_filter,
+                        }
+                    )
+                raw_text = parsed.get("raw_text", "")
+            except Exception as e:
+                pass
         elif any(filename.endswith(ext) for ext in [".txt", ".csv", ".tsv"]):
             try:
                 extracted = uploaded_file.read().decode("utf-8", errors="ignore")

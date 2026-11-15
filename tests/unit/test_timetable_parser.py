@@ -57,3 +57,34 @@ def test_parse_tab_separated_timetable():
     result = parse_timetable_text(tsv_text)
     assert result["total_extracted"] == 3
     assert [s["weekday"] for s in result["slots"]] == ["Monday", "Tuesday", "Thursday"]
+
+
+def test_parse_ksit_master_timetable_image_bcs501():
+    from pathlib import Path
+    from scheduling.timetable_parser import parse_timetable_from_image
+
+    img_path = Path(
+        r"C:\Users\Jamal Khan\.gemini\antigravity\brain\4a63b49a-bd63-42e5-8dcd-e7a8d22631ff\.user_uploaded\media_1794761005759_3acb7d71.jpg"
+    )
+    if not img_path.is_file():
+        return
+
+    with img_path.open("rb") as f:
+        result = parse_timetable_from_image(f, subject_filter="BCS501")
+
+    assert result["total_extracted"] >= 3
+    slots = result["slots"]
+    weekdays = [s["weekday"] for s in slots]
+    # BCS501 (SE&PM) has Monday Period 2, Friday Period 1, Wednesday Period 7, etc.
+    assert "Monday" in weekdays
+    mon = next(s for s in slots if s["weekday"] == "Monday")
+    assert mon["period"] == "2"
+    assert mon["start_time"] == "09:25"
+    assert mon["end_time"] == "10:20"
+
+    assert "Friday" in weekdays
+    fri = next(s for s in slots if s["weekday"] == "Friday")
+    assert fri["period"] == "1"
+    assert fri["start_time"] == "08:30"
+    assert fri["end_time"] == "09:25"
+

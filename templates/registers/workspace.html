@@ -448,75 +448,85 @@ document.addEventListener("DOMContentLoaded", function () {
       const isPdf = selectedFile.name.toLowerCase().endsWith(".pdf");
       const isImage = selectedFile.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp)$/i.test(selectedFile.name);
 
-      if (isPdf || !isImage) {
-        statusMsg.textContent = "Uploading & extracting PDF timetable text...";
-        progressBar.style.width = "40%";
-        progressText.textContent = "40%";
+      statusMsg.textContent = isPdf ? "Reading & parsing PDF timetable..." : "Analyzing timetable image with OCR engine...";
+      progressBar.style.width = "35%";
+      progressText.textContent = "35%";
 
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
 
-        const resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCsrfToken() },
-          body: formData,
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.status !== "ok") {
-          throw new Error(data.message || "Failed to parse timetable file.");
-        }
+      let resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCsrfToken() },
+        body: formData,
+      });
+      let data = await resp.json();
+
+      if (resp.ok && data.status === "ok" && data.slots && data.slots.length > 0) {
         progressBar.style.width = "100%";
         progressText.textContent = "100%";
         renderSlots(data.slots, data.raw_text);
-      } else {
-        // Image file -> Load Tesseract.js client OCR
-        statusMsg.textContent = "Loading OCR recognition engine...";
-        progressBar.style.width = "25%";
-        progressText.textContent = "25%";
+        return;
+      }
+
+      // If it's an image and server returned 0 slots (e.g. cloud host without native OCR), fall back to client Tesseract OCR
+      if (isImage) {
+        statusMsg.textContent = "Loading client OCR engine...";
+        progressBar.style.width = "50%";
+        progressText.textContent = "50%";
 
         await loadTesseractScript();
 
-        statusMsg.textContent = "Scanning timetable image with OCR...";
-        progressBar.style.width = "45%";
-        progressText.textContent = "45%";
+        statusMsg.textContent = "Scanning timetable image...";
+        progressBar.style.width = "60%";
+        progressText.textContent = "60%";
 
         const worker = await Tesseract.createWorker("eng", 1, {
           logger: m => {
             if (m.status === "recognizing text" && m.progress) {
               const pct = Math.round(m.progress * 100);
-              progressBar.style.width = `${40 + Math.round(pct * 0.45)}%`;
-              progressText.textContent = `${40 + Math.round(pct * 0.45)}%`;
-              statusMsg.textContent = `Recognizing timetable text (${pct}%)...`;
+              progressBar.style.width = `${60 + Math.round(pct * 0.35)}%`;
+              progressText.textContent = `${60 + Math.round(pct * 0.35)}%`;
+              statusMsg.textContent = `Recognizing text (${pct}%)...`;
             }
           }
         });
-        
+
         const ret = await worker.recognize(selectedFile);
         await worker.terminate();
 
         const recognizedText = ret.data.text;
-        statusMsg.textContent = "Parsing extracted timetable schedule...";
-        progressBar.style.width = "90%";
-        progressText.textContent = "90%";
+        statusMsg.textContent = "Parsing timetable schedule...";
+        progressBar.style.width = "95%";
+        progressText.textContent = "95%";
 
-        const formData = new FormData();
-        formData.append("raw_text", recognizedText);
-        formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
+        const fd = new FormData();
+        fd.append("raw_text", recognizedText);
+        fd.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
 
-        const resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
+        resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
           method: "POST",
           headers: { "X-CSRFToken": getCsrfToken() },
-          body: formData,
+          body: fd,
         });
-        const data = await resp.json();
+        data = await resp.json();
         if (!resp.ok || data.status !== "ok") {
           throw new Error(data.message || "Failed to parse timetable slots.");
         }
         progressBar.style.width = "100%";
         progressText.textContent = "100%";
         renderSlots(data.slots, data.raw_text || recognizedText);
+        return;
       }
+
+      // For PDF or text files
+      if (!resp.ok || data.status !== "ok") {
+        throw new Error(data.message || "Failed to parse timetable file.");
+      }
+      progressBar.style.width = "100%";
+      progressText.textContent = "100%";
+      renderSlots(data.slots || [], data.raw_text || "");
     } catch (err) {
       alert("Error processing timetable: " + err.message);
     } finally {
