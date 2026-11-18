@@ -296,6 +296,28 @@
       <span id="tt-slots-badge" class="badge" style="background: #10b981; color: white;">0 Slots Found</span>
     </div>
 
+    <!-- Detected Subjects from Timetable Sheet Ribbon -->
+    <div id="tt-detected-subjects-box" style="display: none; margin-bottom: 16px; padding: 14px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+        <span style="font-size: 13px; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Detected Subjects in Master Timetable (Click to filter):
+        </span>
+        <label id="tt-sync-register-label" style="display: none; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #15803d; cursor: pointer; background: white; padding: 4px 10px; border-radius: 6px; border: 1px solid #86efac;">
+          <input type="checkbox" id="tt-sync-register-checkbox" checked style="accent-color: #059669; cursor: pointer;">
+          <span id="tt-sync-register-text">Update register to match selected subject</span>
+        </label>
+      </div>
+      <div id="tt-detected-chips" style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <!-- Pills populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Mismatch Banner (if filter code was not in timetable) -->
+    <div id="tt-mismatch-banner" style="display: none; margin-bottom: 14px; padding: 10px 14px; background: #fffbeb; border: 1px solid #fef08a; border-radius: 8px; font-size: 13px; color: #854d0e;">
+      ℹ️ <strong>Note:</strong> No slots matched register code '<strong>{{ register.subject_code }}</strong>'. Showing all detected timetable slots. Click one of the subject chips above to filter for your subject.
+    </div>
+
     <div class="table-scroll" style="margin-bottom: 14px;">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
@@ -340,6 +362,41 @@
 #tt-dropzone.dragover { background: #ecfdf5 !important; border-color: #10b981 !important; transform: scale(1.01); }
 .tt-slot-input { width: 100%; padding: 6px 8px; border: 1px solid #d1fae5; border-radius: 6px; font-size: 13px; }
 .tt-slot-input:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
+.tt-subject-pill {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #86efac;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tt-subject-pill:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+.tt-subject-pill.active {
+  background: #059669;
+  border-color: #047857;
+  color: white;
+}
+.tt-subject-pill.active .tt-pill-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: white;
+}
+.tt-pill-badge {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
 </style>
 
 <script>
@@ -434,126 +491,155 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Scanning logic
+  let currentScanData = null;
+  let currentSelectedSubject = null;
+
+  const detectedSubjectsBox = document.getElementById("tt-detected-subjects-box");
+  const detectedChips = document.getElementById("tt-detected-chips");
+  const mismatchBanner = document.getElementById("tt-mismatch-banner");
+  const syncRegisterLabel = document.getElementById("tt-sync-register-label");
+  const syncRegisterCheckbox = document.getElementById("tt-sync-register-checkbox");
+  const syncRegisterText = document.getElementById("tt-sync-register-text");
+
   scanBtn.addEventListener("click", async function () {
     if (!selectedFile) return;
 
     scanBtn.disabled = true;
     statusBox.style.display = "flex";
     progressContainer.style.display = "block";
-    progressBar.style.width = "10%";
-    progressText.textContent = "10%";
+    progressBar.style.width = "20%";
+    progressText.textContent = "20%";
     resultsBox.style.display = "none";
 
     try {
       const isPdf = selectedFile.name.toLowerCase().endsWith(".pdf");
-      const isImage = selectedFile.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp)$/i.test(selectedFile.name);
-
-      statusMsg.textContent = isPdf ? "Reading & parsing PDF timetable..." : "Analyzing timetable image with OCR engine...";
-      progressBar.style.width = "35%";
-      progressText.textContent = "35%";
+      statusMsg.textContent = isPdf ? "Extracting PDF timetable schedule..." : "Analyzing timetable with intelligent OCR engine...";
+      progressBar.style.width = "45%";
+      progressText.textContent = "45%";
 
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
 
-      let resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
+      const resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
         method: "POST",
         headers: { "X-CSRFToken": getCsrfToken() },
         body: formData,
       });
-      let data = await resp.json();
 
-      if (resp.ok && data.status === "ok" && data.slots && data.slots.length > 0) {
-        progressBar.style.width = "100%";
-        progressText.textContent = "100%";
-        renderSlots(data.slots, data.raw_text);
-        return;
-      }
+      const data = await resp.json();
 
-      // If it's an image and server returned 0 slots (e.g. cloud host without native OCR), fall back to client Tesseract OCR
-      if (isImage) {
-        statusMsg.textContent = "Loading client OCR engine...";
-        progressBar.style.width = "50%";
-        progressText.textContent = "50%";
-
-        await loadTesseractScript();
-
-        statusMsg.textContent = "Scanning timetable image...";
-        progressBar.style.width = "60%";
-        progressText.textContent = "60%";
-
-        const worker = await Tesseract.createWorker("eng", 1, {
-          logger: m => {
-            if (m.status === "recognizing text" && m.progress) {
-              const pct = Math.round(m.progress * 100);
-              progressBar.style.width = `${60 + Math.round(pct * 0.35)}%`;
-              progressText.textContent = `${60 + Math.round(pct * 0.35)}%`;
-              statusMsg.textContent = `Recognizing text (${pct}%)...`;
-            }
-          }
-        });
-
-        const ret = await worker.recognize(selectedFile);
-        await worker.terminate();
-
-        const recognizedText = ret.data.text;
-        statusMsg.textContent = "Parsing timetable schedule...";
-        progressBar.style.width = "95%";
-        progressText.textContent = "95%";
-
-        const fd = new FormData();
-        fd.append("raw_text", recognizedText);
-        fd.append("subject_filter", subjectFilterInput ? subjectFilterInput.value : "");
-
-        resp = await fetch("{% url 'timetable-upload-ocr' register.pk %}", {
-          method: "POST",
-          headers: { "X-CSRFToken": getCsrfToken() },
-          body: fd,
-        });
-        data = await resp.json();
-        if (!resp.ok || data.status !== "ok") {
-          throw new Error(data.message || "Failed to parse timetable slots.");
-        }
-        progressBar.style.width = "100%";
-        progressText.textContent = "100%";
-        renderSlots(data.slots, data.raw_text || recognizedText);
-        return;
-      }
-
-      // For PDF or text files
       if (!resp.ok || data.status !== "ok") {
         throw new Error(data.message || "Failed to parse timetable file.");
       }
+
       progressBar.style.width = "100%";
       progressText.textContent = "100%";
-      renderSlots(data.slots || [], data.raw_text || "");
+      statusMsg.textContent = "Complete!";
+      renderScanResults(data);
     } catch (err) {
-      alert("Error processing timetable: " + err.message);
+      alert("Error reading timetable: " + err.message);
     } finally {
       scanBtn.disabled = false;
       statusBox.style.display = "none";
-      setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
+      setTimeout(() => { progressContainer.style.display = "none"; }, 1200);
     }
   });
 
-  function loadTesseractScript() {
-    return new Promise((resolve, reject) => {
-      if (window.Tesseract) {
-        resolve();
-        return;
+  function renderScanResults(data) {
+    currentScanData = data;
+    currentSelectedSubject = null;
+    rawTextBox.textContent = data.raw_text || "No raw text available.";
+
+    const detected = data.detected_subjects || [];
+    if (detected && detected.length > 0) {
+      detectedSubjectsBox.style.display = "block";
+      detectedChips.innerHTML = "";
+
+      // Add pill for each detected subject
+      detected.forEach((ds) => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "tt-subject-pill";
+        const shortName = (ds.aliases && ds.aliases.find(a => a !== ds.code)) || ds.name.split(" ")[0];
+        pill.innerHTML = `<strong>${ds.code}</strong> (${shortName}) <span class="tt-pill-badge">${ds.slot_count || 0} slots</span>`;
+        pill.title = `${ds.code}: ${ds.name} (Faculty: ${ds.faculty || 'N/A'})`;
+
+        pill.addEventListener("click", () => {
+          selectSubject(ds, pill);
+        });
+
+        detectedChips.appendChild(pill);
+      });
+
+      // Add "All Subjects" pill
+      const allPill = document.createElement("button");
+      allPill.type = "button";
+      allPill.className = "tt-subject-pill";
+      const totalAll = (data.all_slots || data.slots || []).length;
+      allPill.innerHTML = `<strong>All Slots</strong> <span class="tt-pill-badge">${totalAll}</span>`;
+      allPill.addEventListener("click", () => {
+        selectAllSlots(allPill);
+      });
+      detectedChips.appendChild(allPill);
+
+      // Select initial subject
+      if (data.filter_matched && data.subject_filter) {
+        mismatchBanner.style.display = "none";
+        // Find matching pill
+        const matchIdx = detected.findIndex(ds =>
+          ds.code.toUpperCase() === data.subject_filter.toUpperCase() ||
+          (ds.aliases && ds.aliases.some(a => a.toUpperCase() === data.subject_filter.toUpperCase()))
+        );
+        if (matchIdx >= 0) {
+          selectSubject(detected[matchIdx], detectedChips.children[matchIdx]);
+        } else {
+          displaySlots(data.slots);
+        }
+      } else {
+        // Filter did not match register code
+        mismatchBanner.style.display = "block";
+        if (detected.length > 0 && detected[0].slot_count > 0) {
+          selectSubject(detected[0], detectedChips.children[0]);
+        } else {
+          selectAllSlots(allPill);
+        }
       }
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Unable to load OCR engine. Please check your internet connection or upload as a PDF."));
-      document.head.appendChild(s);
-    });
+    } else {
+      detectedSubjectsBox.style.display = "none";
+      mismatchBanner.style.display = "none";
+      displaySlots(data.slots || []);
+    }
+
+    resultsBox.style.display = "block";
+    resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function renderSlots(slots, rawText) {
-    slotsTbody.innerHTML = "";
-    rawTextBox.textContent = rawText || "No raw text available.";
+  function selectSubject(ds, pillEl) {
+    currentSelectedSubject = ds;
+    detectedChips.querySelectorAll(".tt-subject-pill").forEach(p => p.classList.remove("active"));
+    if (pillEl) pillEl.classList.add("active");
 
+    // Show sync register option
+    syncRegisterLabel.style.display = "flex";
+    syncRegisterText.textContent = `Sync register to ${ds.code} - ${ds.name} (Faculty: ${ds.faculty || 'Ms/Mr'})`;
+    syncRegisterCheckbox.checked = true;
+
+    displaySlots(ds.slots || []);
+  }
+
+  function selectAllSlots(pillEl) {
+    currentSelectedSubject = null;
+    detectedChips.querySelectorAll(".tt-subject-pill").forEach(p => p.classList.remove("active"));
+    if (pillEl) pillEl.classList.add("active");
+
+    syncRegisterLabel.style.display = "none";
+    const allSlots = (currentScanData && currentScanData.all_slots) ? currentScanData.all_slots : (currentScanData ? currentScanData.slots : []);
+    displaySlots(allSlots || []);
+  }
+
+  function displaySlots(slots) {
+    slotsTbody.innerHTML = "";
     const defaultFrom = termStartInput ? termStartInput.value : "";
     const defaultTo = termEndInput ? termEndInput.value : "";
 
@@ -563,8 +649,8 @@ document.addEventListener("DOMContentLoaded", function () {
       slotsTbody.innerHTML = `
         <tr>
           <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
-            No teaching slots matching "${subjectFilterInput ? subjectFilterInput.value : 'all'}" could be detected automatically.<br>
-            <small>Try clearing the Subject Code filter or click <strong>+ Add Another Slot</strong> below to add your slots.</small>
+            No teaching slots found for this selection.<br>
+            <small>Click another subject chip above or click <strong>+ Add Another Slot</strong> below.</small>
           </td>
         </tr>`;
     } else {
@@ -579,12 +665,10 @@ document.addEventListener("DOMContentLoaded", function () {
           end_time: s.end_time || "10:00",
           effective_from: s.effective_from || defaultFrom,
           effective_to: s.effective_to || defaultTo,
+          raw_cell: s.raw_cell || "",
         });
       });
     }
-
-    resultsBox.style.display = "block";
-    resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function appendSlotRow(slot) {
@@ -685,6 +769,15 @@ document.addEventListener("DOMContentLoaded", function () {
     saveSlotsBtn.disabled = true;
     saveSlotsBtn.textContent = "Saving to Timetable...";
 
+    const doSync = syncRegisterCheckbox && syncRegisterCheckbox.checked && currentSelectedSubject;
+    const payload = {
+      slots: slotsToSave,
+      update_register_details: Boolean(doSync),
+      subject_code: doSync ? currentSelectedSubject.code : "",
+      subject_name: doSync ? currentSelectedSubject.name : "",
+      faculty_name: doSync ? currentSelectedSubject.faculty : "",
+    };
+
     try {
       const resp = await fetch("{% url 'timetable-apply-slots' register.pk %}", {
         method: "POST",
@@ -692,7 +785,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "Content-Type": "application/json",
           "X-CSRFToken": getCsrfToken(),
         },
-        body: JSON.stringify({ slots: slotsToSave }),
+        body: JSON.stringify(payload),
       });
       const data = await resp.json();
       if (!resp.ok || data.status !== "ok") {

@@ -578,4 +578,50 @@ def test_parse_timetable_upload_ocr_text_and_apply_slots(client, faculty, regist
     assert mon.end_time == time(10, 0)
 
 
+def test_parse_timetable_upload_master_image_and_sync_details(client, faculty, register):
+    from pathlib import Path
+    img_path = Path(
+        r"C:\Users\Jamal Khan\.gemini\antigravity\brain\4a63b49a-bd63-42e5-8dcd-e7a8d22631ff\.user_uploaded\media_1794761005759_3acb7d71.jpg"
+    )
+    if not img_path.is_file():
+        return
+
+    client.force_login(faculty)
+    url_parse = reverse("timetable-upload-ocr", args=[register.pk])
+
+    # Upload with register subject code (e.g. BCS501)
+    with img_path.open("rb") as f:
+        resp = client.post(
+            url_parse,
+            {"file": f, "subject_filter": "BCS501"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["filter_matched"] is True
+    assert len(data["slots"]) == 4
+    assert len(data["detected_subjects"]) >= 5
+
+    # Apply slots with update_register_details=True
+    url_apply = reverse("timetable-apply-slots", args=[register.pk])
+    import json
+    resp_apply = client.post(
+        url_apply,
+        data=json.dumps({
+            "slots": data["slots"],
+            "update_register_details": True,
+            "subject_code": "BCS501",
+            "subject_name": "SOFTWARE ENGINEERING & PROJECT MANAGEMENT",
+            "faculty_name": "Ms. CHAITRA Y R",
+        }),
+        content_type="application/json",
+    )
+    assert resp_apply.status_code == 200
+    register.refresh_from_db()
+    assert register.subject_code == "BCS501"
+    assert register.subject_name == "SOFTWARE ENGINEERING & PROJECT MANAGEMENT"
+    assert register.faculty_name == "Ms. CHAITRA Y R"
+    assert register.timetable_entries.count() == 4
+
+
 

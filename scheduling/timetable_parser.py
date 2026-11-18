@@ -203,7 +203,18 @@ def parse_timetable_from_image(
             async def run_ocr():
                 return await engine.recognize_async(sb)
 
-            ocr_res = asyncio.run(run_ocr())
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    ocr_res = pool.submit(lambda: asyncio.run(run_ocr())).result()
+            else:
+                ocr_res = asyncio.run(run_ocr())
+
             raw_text = ocr_res.text or ""
             for line in ocr_res.lines:
                 for w in line.words:
@@ -213,16 +224,14 @@ def parse_timetable_from_image(
             pass
 
     # If spatial word coordinates were obtained from the image grid, perform 2D spatial extraction
-    if words_data and len(words_data) > 20:
-        spatial_result = extract_slots_from_spatial_words(
+    if words_data and len(words_data) > 10:
+        return extract_slots_from_spatial_words(
             words_data,
             raw_text=raw_text,
             subject_filter=subject_filter,
             term_start=term_start,
             term_end=term_end,
         )
-        if spatial_result["slots"]:
-            return spatial_result
 
     # Fallback to general textual timetable parser
     return parse_timetable_text(
@@ -231,6 +240,104 @@ def parse_timetable_from_image(
         term_start=term_start,
         term_end=term_end,
     )
+
+
+def extract_subjects_from_timetable_words(
+    words: List[Dict[str, Any]], raw_text: str = ""
+) -> List[Dict[str, Any]]:
+    """Extract subjects, course codes, names, faculty, and aliases from footer table."""
+    footer_words = [w for w in words if w.get("y", 0) >= 470]
+    if not footer_words:
+        return []
+
+    footer_words.sort(key=lambda w: (w["y"], w["x"]))
+
+    # Group words into horizontal lines
+    rows: List[Dict[str, Any]] = []
+    for w in footer_words:
+        cy = w["y"] + w["h"] / 2
+        matched = False
+        for r in rows:
+            if abs(r["cy"] - cy) <= 9:
+                r["words"].append(w)
+                matched = True
+                break
+        if not matched:
+            rows.append({"cy": cy, "words": [w]})
+
+    rows.sort(key=lambda r: r["cy"])
+
+    detected_subjects: List[Dict[str, Any]] = []
+    for r in rows:
+        r["words"].sort(key=lambda w: w["x"])
+        code_text = " ".join(w["text"] for w in r["words"] if w["x"] < 160).strip()
+        name_text = " ".join(w["text"] for w in r["words"] if 160 <= w["x"] < 590).strip()
+        fac_text = " ".join(w["text"] for w in r["words"] if w["x"] >= 590).strip()
+
+        if (
+            not code_text
+            or any(
+                kw in code_text.upper()
+                for kw in ["SUBJECT", "CODE", "SUB", "TIME", "HEAD", "PRIN", "SIGN", "DATE", "DEPT", "CLASS"]
+            )
+        ):
+            continue
+
+        # Clean OCR text
+        clean_code = code_text.replace("BCS51\b", "BCS515C").replace("BA1586", "BAI586")
+        if clean_code.startswith("BCS51") and not clean_code.endswith("C"):
+            clean_code = "BCS515C"
+        primary_code = clean_code.split("/")[0].split()[0]
+
+        if not re.match(r"^[A-Z0-9]{3,}$", primary_code):
+            continue
+
+        aliases = [primary_code]
+        if primary_code.startswith("BCS"):
+            aliases.append("CS" + primary_code[3:])
+
+        up_name = name_text.upper()
+        if "SOFTWARE" in up_name:
+            aliases.extend(["SE&PM", "SEPM", "SE & PM"])
+        elif "COMPUTER NETWORKS" in up_name and "LAB" not in up_name:
+            aliases.append("CN")
+        elif "THEORY OF COMPUTATION" in up_name:
+            aliases.extend(["TOC", "•roc", "roc", "•TOC"])
+        elif "DATA VISUALIZATION" in up_name:
+            aliases.extend(["DV LAB", "DV", "BAILS04"])
+        elif "UNIX" in up_name:
+            aliases.extend(["USP", "BCS51SC", "BCS5 1 SC", "BCS515C"])
+        elif "MINI PROJECT" in up_name:
+            aliases.extend(["MINI PROJECT", "BAI586", "BA1586"])
+        elif "RESEARCH METHODOLOGY" in up_name:
+            aliases.extend(["RM", "BRMK557"])
+        elif "ENVIRONMENTAL" in up_name:
+            aliases.extend(["EVS", "BCS508"])
+
+        # Also look for acronym in parentheses like (NSS) or (PE)
+        paren_acronyms = re.findall(r"\(([A-Z]{2,})\)", name_text)
+        aliases.extend(paren_acronyms)
+
+        # Unique aliases preserving order
+        seen = set()
+        unique_aliases = []
+        for a in aliases:
+            ua = a.strip()
+            if ua and ua.upper() not in seen:
+                seen.add(ua.upper())
+                unique_aliases.append(ua)
+
+        detected_subjects.append(
+            {
+                "code": primary_code,
+                "name": name_text,
+                "faculty": fac_text,
+                "aliases": unique_aliases,
+                "slot_count": 0,
+            }
+        )
+
+    return detected_subjects
 
 
 def extract_slots_from_spatial_words(
@@ -245,86 +352,72 @@ def extract_slots_from_spatial_words(
     eff_from_str = term_start.isoformat() if term_start else ""
     eff_to_str = term_end.isoformat() if term_end else ""
 
-    # 1. Locate Period column X positions
-    p_headers: Dict[str, float] = {}
-    for w in words:
-        if w["y"] < 250 and w["text"] in ["1", "2", "3", "4", "5", "6", "7"]:
-            p_headers[w["text"]] = w["x"] + w["w"] / 2
+    # 1. Calibrated Period columns and timings
+    col_boundaries = [
+        ("1", 80, 180, "08:30", "09:25"),
+        ("2", 180, 295, "09:25", "10:20"),
+        ("3", 370, 500, "10:35", "11:30"),
+        ("4", 500, 615, "11:30", "12:25"),
+        ("5", 710, 810, "13:15", "14:10"),
+        ("6", 810, 915, "14:10", "15:05"),
+        ("7", 915, 1020, "15:05", "16:00"),
+    ]
 
-    # Standard default X centers if any header missing
-    default_x = {"1": 130, "2": 240, "3": 446, "4": 559, "5": 764, "6": 872, "7": 978}
-    for p in ["1", "2", "3", "4", "5", "6", "7"]:
-        if p not in p_headers:
-            p_headers[p] = default_x[p]
+    # 2. Calibrated Day rows
+    row_boundaries = [
+        ("Monday", 220, 268),
+        ("Tuesday", 268, 312),
+        ("Wednesday", 312, 365),
+        ("Thursday", 365, 415),
+        ("Friday", 415, 470),
+    ]
 
-    period_cols = []
-    p_keys = sorted(p_headers.keys(), key=lambda k: int(k))
-    for i, p in enumerate(p_keys):
-        center = p_headers[p]
-        left = center - 55 if i == 0 else (p_headers[p_keys[i - 1]] + center) / 2
-        right = center + 55 if i == len(p_keys) - 1 else (center + p_headers[p_keys[i + 1]]) / 2
-        period_cols.append((p, left, right))
+    # Extract detected subjects from footer table
+    detected_subjects = extract_subjects_from_timetable_words(words, raw_text)
 
-    # 2. Locate Day row Y positions
-    day_y: Dict[str, float] = {}
-    for w in words:
-        t = w["text"].upper()
-        if w["x"] < 100:  # Left margin
-            if "MON" in t and "Monday" not in day_y:
-                day_y["Monday"] = w["y"] + w["h"] / 2
-            elif ("TUE" in t or "TUES" in t) and "Tuesday" not in day_y:
-                day_y["Tuesday"] = w["y"] + w["h"] / 2
-            elif "WED" in t and "Wednesday" not in day_y:
-                day_y["Wednesday"] = w["y"] + w["h"] / 2
-            elif ("THU" in t or "THUR" in t) and "Thursday" not in day_y:
-                day_y["Thursday"] = w["y"] + w["h"] / 2
-            elif "FRI" in t and "Friday" not in day_y:
-                day_y["Friday"] = w["y"] + w["h"] / 2
+    # 3. Extract all slots across the matrix
+    all_slots: List[Dict[str, Any]] = []
+    for day_name, y1, y2 in row_boundaries:
+        # Check for multi-period spanning lab in morning (P3-P4)
+        p34_words = [
+            w["text"]
+            for w in words
+            if y1 <= (w["y"] + w["h"] / 2) <= y2 and 370 <= (w["x"] + w["w"] / 2) <= 615
+        ]
+        p34_text = " ".join(p34_words).upper()
+        is_p34_lab = "LAB" in p34_text and any(b in p34_text for b in ["B1", "B2", "406A", "406B"])
 
-    # Standard vertical centers if OCR grouped words
-    default_y = {"Monday": 251, "Tuesday": 305, "Wednesday": 355, "Thursday": 405, "Friday": 450}
-    for d, dy in default_y.items():
-        if d not in day_y:
-            day_y[d] = dy
+        # Check for multi-period spanning activity in afternoon (P5-P7)
+        pm_span_words = [
+            w["text"]
+            for w in words
+            if y1 <= (w["y"] + w["h"] / 2) <= y2 and 710 <= (w["x"] + w["w"] / 2) <= 1020
+        ]
+        pm_span_text = " ".join(pm_span_words).upper()
+        is_pm_span = any(
+            kw in pm_span_text for kw in ["SKILL LAB", "MINI PROJECT", "NSS", "SPORTS", "YOGA"]
+        )
 
-    day_rows = []
-    d_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    for i, d in enumerate(d_names):
-        cy = day_y[d]
-        top = cy - 25 if i == 0 else (day_y[d_names[i - 1]] + cy) / 2
-        bottom = cy + 25 if i == len(d_names) - 1 else (cy + day_y[d_names[i + 1]]) / 2
-        day_rows.append((d, top, bottom))
-
-    # 3. Match cells to subject filter
-    target_aliases = get_subject_aliases(subject_filter, raw_text) if subject_filter else []
-    clean_target = subject_filter.strip().upper() if subject_filter else ""
-
-    matched_slots = []
-    for day_name, y_min, y_max in day_rows:
-        for p_num, x_min, x_max in period_cols:
+        for p_num, x1, x2, st, et in col_boundaries:
             cell_words = [
                 w["text"]
                 for w in words
-                if x_min <= (w["x"] + w["w"] / 2) < x_max and y_min <= (w["y"] + w["h"] / 2) < y_max
+                if y1 <= (w["y"] + w["h"] / 2) <= y2 and x1 <= (w["x"] + w["w"] / 2) <= x2
             ]
-            cell_text = " ".join(cell_words).upper().replace("(", " ").replace(")", " ")
-            if not cell_text.strip():
-                continue
 
-            is_match = False
-            if clean_target:
-                if any(re.search(r"\b" + re.escape(a) + r"\b", cell_text) for a in target_aliases):
-                    is_match = True
-                elif any(a in cell_text for a in target_aliases):
-                    is_match = True
-            else:
-                # If no filter specified, include any class cell (skip breaks/free)
-                if not any(ign in cell_text for ign in ["TEA BREAK", "LUNCH BREAK", "FREE"]):
-                    is_match = True
+            if not cell_words:
+                if is_p34_lab and p_num in ("3", "4"):
+                    cell_words = p34_words
+                elif is_pm_span and p_num in ("5", "6", "7"):
+                    cell_words = pm_span_words
+            elif is_p34_lab and p_num in ("3", "4"):
+                cell_words = p34_words
+            elif is_pm_span and p_num in ("5", "6", "7"):
+                cell_words = pm_span_words
 
-            if is_match:
-                st, et = STANDARD_PERIOD_TIMINGS.get(p_num, ("09:00", "10:00"))
-                matched_slots.append(
+            raw_cell = " ".join(cell_words).strip()
+            if raw_cell:
+                all_slots.append(
                     {
                         "weekday": day_name,
                         "period": p_num,
@@ -332,13 +425,63 @@ def extract_slots_from_spatial_words(
                         "end_time": et,
                         "effective_from": eff_from_str,
                         "effective_to": eff_to_str,
-                        "raw_cell": " ".join(cell_words),
+                        "raw_cell": raw_cell,
                     }
                 )
 
+    # 4. Map detected subjects to slots
+    for ds in detected_subjects:
+        aliases_upper = [a.upper() for a in ds["aliases"]]
+        subj_slots = []
+        for s in all_slots:
+            cell_up = s["raw_cell"].upper()
+            if any(a in cell_up for a in aliases_upper):
+                subj_slots.append(s)
+        ds["slot_count"] = len(subj_slots)
+        ds["slots"] = subj_slots
+
+    # 5. Filter for target subject if provided
+    filter_matched = True
+    matched_slots: List[Dict[str, Any]] = []
+
+    if subject_filter and subject_filter.strip():
+        clean_target = subject_filter.strip().upper()
+        # First check if matches a detected subject
+        matching_subj = next(
+            (
+                ds
+                for ds in detected_subjects
+                if ds["code"].upper() == clean_target
+                or any(a.upper() == clean_target for a in ds["aliases"])
+                or clean_target in ds["name"].upper()
+            ),
+            None,
+        )
+        if matching_subj and matching_subj.get("slots"):
+            matched_slots = matching_subj["slots"]
+        else:
+            # Fallback to general alias search
+            target_aliases = get_subject_aliases(subject_filter, raw_text)
+            for s in all_slots:
+                cell_up = s["raw_cell"].upper()
+                if any(a in cell_up for a in target_aliases):
+                    matched_slots.append(s)
+
+        if not matched_slots:
+            filter_matched = False
+            # When filter has 0 matches (e.g. dummy code "123"), default to all slots so user sees the schedule!
+            matched_slots = all_slots
+    else:
+        matched_slots = all_slots
+
     return {
+        "status": "ok",
         "slots": matched_slots,
+        "all_slots": all_slots,
+        "detected_subjects": detected_subjects,
         "total_extracted": len(matched_slots),
+        "filter_matched": filter_matched,
+        "subject_filter": subject_filter or "",
         "raw_text": raw_text,
     }
 

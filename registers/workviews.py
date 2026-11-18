@@ -1,5 +1,6 @@
 from datetime import date
 import json
+import logging
 import uuid
 
 from django.conf import settings
@@ -566,13 +567,16 @@ def export_preview(request, export_id):
     )
 
 
+logger = logging.getLogger(__name__)
+
+
 @login_required
 @never_cache
 @require_http_methods(["POST"])
 def parse_timetable_upload(request, register_id):
-    """Process an uploaded timetable file (PDF, text) or client-side OCR raw text.
+    """Process an uploaded timetable file (PDF, text) or image OCR.
     
-    Parses day of week, periods, and time windows into structured timetable slots.
+    Parses day of week, periods, time windows, and detects subjects & faculty from timetable sheets.
     """
     register = owned_register(request.user, register_id)
     subject_filter = request.POST.get("subject_filter", "").strip() or register.subject_code or ""
@@ -586,6 +590,7 @@ def parse_timetable_upload(request, register_id):
                 extracted = extract_text_from_pdf(uploaded_file)
                 raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
             except Exception as e:
+                logger.exception("PDF timetable extraction failed")
                 return JsonResponse({"status": "error", "message": f"Could not read PDF: {e}"}, status=400)
         elif any(filename.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp"]):
             try:
@@ -595,19 +600,24 @@ def parse_timetable_upload(request, register_id):
                     term_start=register.term_start,
                     term_end=register.term_end,
                 )
-                if parsed.get("slots"):
-                    return JsonResponse(
-                        {
-                            "status": "ok",
-                            "slots": parsed["slots"],
-                            "total": parsed["total_extracted"],
-                            "raw_text": parsed.get("raw_text", "")[:3000],
-                            "subject_filter": subject_filter,
-                        }
-                    )
-                raw_text = parsed.get("raw_text", "")
+                return JsonResponse(
+                    {
+                        "status": "ok",
+                        "slots": parsed.get("slots", []),
+                        "all_slots": parsed.get("all_slots", []),
+                        "detected_subjects": parsed.get("detected_subjects", []),
+                        "total": parsed.get("total_extracted", len(parsed.get("slots", []))),
+                        "filter_matched": parsed.get("filter_matched", True),
+                        "raw_text": parsed.get("raw_text", "")[:3000],
+                        "subject_filter": subject_filter,
+                    }
+                )
             except Exception as e:
-                pass
+                logger.exception("Image timetable OCR failed")
+                return JsonResponse(
+                    {"status": "error", "message": f"Image recognition failed: {e}"},
+                    status=400,
+                )
         elif any(filename.endswith(ext) for ext in [".txt", ".csv", ".tsv"]):
             try:
                 extracted = uploaded_file.read().decode("utf-8", errors="ignore")
@@ -619,7 +629,7 @@ def parse_timetable_upload(request, register_id):
         return JsonResponse(
             {
                 "status": "error",
-                "message": "No text detected. For image files, please ensure OCR scanning completed or paste the timetable text.",
+                "message": "No text detected in the document. Please ensure a clear timetable image or document is uploaded.",
             },
             status=400,
         )
@@ -634,8 +644,11 @@ def parse_timetable_upload(request, register_id):
     return JsonResponse(
         {
             "status": "ok",
-            "slots": parsed["slots"],
-            "total": parsed["total_extracted"],
+            "slots": parsed.get("slots", []),
+            "all_slots": parsed.get("slots", []),
+            "detected_subjects": [],
+            "total": parsed.get("total_extracted", len(parsed.get("slots", []))),
+            "filter_matched": True,
             "raw_text": raw_text[:3000],
             "subject_filter": subject_filter,
         }
@@ -654,8 +667,14 @@ def apply_timetable_slots(request, register_id):
     try:
         data = json.loads(request.body)
         slots = data.get("slots", [])
+        update_register_details = bool(data.get("update_register_details"))
+        subj_code = (data.get("subject_code") or "").strip()
+        subj_name = (data.get("subject_name") or "").strip()
+        fac_name = (data.get("faculty_name") or "").strip()
     except Exception:
         slots = []
+        update_register_details = False
+        subj_code, subj_name, fac_name = "", "", ""
 
     if not slots or not isinstance(slots, list):
         return JsonResponse({"status": "error", "message": "No valid slots provided to save."}, status=400)
@@ -671,17 +690,30 @@ def apply_timetable_slots(request, register_id):
             "effective_to": s.get("effective_to") or None,
         })
 
+    def apply_changes(r):
+        save_rows(r, "timetable", sanitized_slots)
+        if update_register_details and subj_code:
+            r.subject_code = subj_code
+            if subj_name:
+                r.subject_name = subj_name
+            if fac_name:
+                r.faculty_name = fac_name
+            r.save(update_fields=["subject_code", "subject_name", "faculty_name", "updated_at"])
+
     try:
         mutate_register(
             request.user,
             register.pk,
             action="apply_extracted_timetable",
             values={"table": "timetable", "rows": sanitized_slots},
-            change=lambda r: save_rows(r, "timetable", sanitized_slots),
+            change=apply_changes,
             expected_revision=register.revision,
             request_id=uuid.uuid4(),
         )
-        messages.success(request, f"Successfully saved {len(sanitized_slots)} timetable slots from uploaded document!")
+        msg = f"Successfully saved {len(sanitized_slots)} timetable slots from uploaded document!"
+        if update_register_details and subj_code:
+            msg += f" Register subject updated to {subj_code}."
+        messages.success(request, msg)
         return JsonResponse({
             "status": "ok",
             "count": len(sanitized_slots),
