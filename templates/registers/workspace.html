@@ -166,6 +166,19 @@
 
 {% if rows is not None and headings %}
 <section class="panel record-list">
+  {% if tab == 'timetable' and rows and not register.archived_at %}
+  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+    <h3 style="margin: 0; font-size: 16px; color: var(--text-primary);">Current Timetable Slots</h3>
+    <form method="post" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete ALL timetable slots from this register? This action cannot be undone.');">
+      {% csrf_token %}
+      {{ operation.as_p }}
+      <button type="submit" name="action" value="clear_timetable" class="button secondary small" style="color: var(--danger); border-color: #fca5a5; display: inline-flex; align-items: center; gap: 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <span>Clear All Slots</span>
+      </button>
+    </form>
+  </div>
+  {% endif %}
   <div class="table-scroll">
     <table>
       <thead>
@@ -192,6 +205,26 @@
               <input type="hidden" name="action" value="delete_student">
               <input type="hidden" name="student_id" value="{{ id }}">
               <button type="submit" class="action-btn-link text-danger" style="background: none; border: 1px solid var(--border-subtle); cursor: pointer; color: var(--danger);" title="Delete Student">
+                Delete
+              </button>
+            </form>
+            {% elif tab == 'timetable' %}
+            <form method="post" style="display: inline-block; margin: 0 0 0 6px;" onsubmit="return confirm('Are you sure you want to delete this timetable slot ({{ values.0 }}, Period {{ values.1 }})?');">
+              {% csrf_token %}
+              {{ operation.as_p }}
+              <input type="hidden" name="action" value="delete_entry">
+              <input type="hidden" name="entry_id" value="{{ id }}">
+              <button type="submit" class="action-btn-link text-danger" style="background: none; border: 1px solid var(--border-subtle); cursor: pointer; color: var(--danger); padding: 2px 8px; border-radius: 4px;" title="Delete Timetable Slot">
+                Delete
+              </button>
+            </form>
+            {% elif tab in 'lessons,sessions,holidays' %}
+            <form method="post" style="display: inline-block; margin: 0 0 0 6px;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
+              {% csrf_token %}
+              {{ operation.as_p }}
+              <input type="hidden" name="action" value="delete_entry">
+              <input type="hidden" name="entry_id" value="{{ id }}">
+              <button type="submit" class="action-btn-link text-danger" style="background: none; border: 1px solid var(--border-subtle); cursor: pointer; color: var(--danger); padding: 2px 8px; border-radius: 4px;" title="Delete Entry">
                 Delete
               </button>
             </form>
@@ -1075,6 +1108,16 @@ document.addEventListener("DOMContentLoaded", function () {
         Delete Student
       </button>
       <input type="hidden" name="student_id" value="{{ request.GET.edit }}">
+      {% elif tab == 'timetable' %}
+      <button type="submit" class="button danger" name="action" value="delete_entry" formnovalidate onclick="return confirm('Are you sure you want to delete this timetable slot?');" style="margin-left: 8px;">
+        Delete Timetable Slot
+      </button>
+      <input type="hidden" name="entry_id" value="{{ request.GET.edit }}">
+      {% else %}
+      <button type="submit" class="button danger" name="action" value="delete_entry" formnovalidate onclick="return confirm('Are you sure you want to delete this record?');" style="margin-left: 8px;">
+        Delete Entry
+      </button>
+      <input type="hidden" name="entry_id" value="{{ request.GET.edit }}">
       {% endif %}
       {% endif %}
       <span class="form-status" role="status" aria-live="polite"></span>

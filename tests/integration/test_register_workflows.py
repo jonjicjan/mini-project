@@ -624,4 +624,71 @@ def test_parse_timetable_upload_master_image_and_sync_details(client, faculty, r
     assert register.timetable_entries.count() == 4
 
 
+def test_delete_timetable_slot_and_clear_all(client, faculty, register):
+    client.force_login(faculty)
+    from datetime import time
+    from scheduling.services import save_slot
+
+    # Create two slots
+    save_slot(
+        faculty,
+        register.pk,
+        values={
+            "weekday": 0,
+            "period": "1",
+            "start_time": time(9, 0),
+            "end_time": time(10, 0),
+            "effective_from": register.term_start,
+            "effective_to": register.term_end,
+        },
+        expected_revision=register.revision,
+        request_id=uuid.uuid4(),
+    )
+    register.refresh_from_db()
+    save_slot(
+        faculty,
+        register.pk,
+        values={
+            "weekday": 1,
+            "period": "2",
+            "start_time": time(10, 0),
+            "end_time": time(11, 0),
+            "effective_from": register.term_start,
+            "effective_to": register.term_end,
+        },
+        expected_revision=register.revision,
+        request_id=uuid.uuid4(),
+    )
+    register.refresh_from_db()
+    assert register.timetable_entries.count() == 2
+
+    # Delete first slot using delete_entry
+    first_slot = register.timetable_entries.order_by("weekday").first()
+    resp = client.post(
+        reverse("register-workspace", args=[register.pk, "timetable"]),
+        {
+            "action": "delete_entry",
+            "entry_id": str(first_slot.pk),
+            "expected_revision": register.revision,
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert resp.status_code == 302
+    register.refresh_from_db()
+    assert register.timetable_entries.count() == 1
+
+    # Clear all slots using clear_timetable
+    resp_clear = client.post(
+        reverse("register-workspace", args=[register.pk, "timetable"]),
+        {
+            "action": "clear_timetable",
+            "expected_revision": register.revision,
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert resp_clear.status_code == 302
+    register.refresh_from_db()
+    assert register.timetable_entries.count() == 0
+
+
 

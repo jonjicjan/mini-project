@@ -303,6 +303,9 @@ def workspace(request, register_id, tab):
                         instance.attendance.all().delete()
                         instance.delete()
                         msg = "Class/test session deleted successfully."
+                    elif tab == "timetable":
+                        instance.delete()
+                        msg = "Timetable slot deleted successfully."
                     else:
                         instance.delete()
                         msg = "Entry deleted successfully."
@@ -312,6 +315,16 @@ def workspace(request, register_id, tab):
 
                 messages.success(request, msg)
                 return redirect("register-workspace", register_id=register.pk, tab=tab)
+            elif action == "clear_timetable" and tab == "timetable":
+                from django.db import transaction
+
+                with transaction.atomic():
+                    deleted_count, _ = register.timetable_entries.all().delete()
+                    register.revision += 1
+                    register.save(update_fields=["revision", "updated_at"])
+
+                messages.success(request, f"All {deleted_count} timetable slots have been deleted.")
+                return redirect("register-workspace", register_id=register.pk, tab="timetable")
             elif action == "save" and form and form.is_valid():
                 op = form.operation()
                 if tab in ("students", "lessons"):
