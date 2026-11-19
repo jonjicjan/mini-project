@@ -88,3 +88,50 @@ def test_parse_ksit_master_timetable_image_bcs501():
     assert fri["start_time"] == "08:30"
     assert fri["end_time"] == "09:25"
 
+
+def test_parse_ksit_master_timetable_image_bail504_lab():
+    from pathlib import Path
+    from scheduling.timetable_parser import parse_timetable_from_image
+
+    img_path = Path(
+        r"C:\Users\Jamal Khan\.gemini\antigravity\brain\4a63b49a-bd63-42e5-8dcd-e7a8d22631ff\.user_uploaded\media_1794761005759_3acb7d71.jpg"
+    )
+    if not img_path.is_file():
+        return
+
+    with img_path.open("rb") as f:
+        result = parse_timetable_from_image(f, subject_filter="BAIL504")
+
+    assert result["total_extracted"] == 4
+    # Spans Wednesday P3, P4 and Thursday P3, P4
+    days = {s["weekday"] for s in result["slots"]}
+    assert "Wednesday" in days
+    assert "Thursday" in days
+    periods = {s["period"] for s in result["slots"]}
+    assert periods == {"3", "4"}
+
+
+def test_parse_ksit_master_timetable_detected_subjects():
+    from pathlib import Path
+    from scheduling.timetable_parser import parse_timetable_from_image
+
+    img_path = Path(
+        r"C:\Users\Jamal Khan\.gemini\antigravity\brain\4a63b49a-bd63-42e5-8dcd-e7a8d22631ff\.user_uploaded\media_1794761005759_3acb7d71.jpg"
+    )
+    if not img_path.is_file():
+        return
+
+    with img_path.open("rb") as f:
+        result = parse_timetable_from_image(f)
+
+    detected = result["detected_subjects"]
+    codes = [d["code"] for d in detected]
+    assert "BCS501" in codes
+    assert "BCS502" in codes
+    assert "BCS503" in codes
+    assert "BAIL504" in codes
+    assert "BCS515C" in codes
+    assert "BRMK557" in codes
+    assert "BAI586" in codes
+    assert len(result["all_slots"]) >= 30
+

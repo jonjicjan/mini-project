@@ -680,17 +680,22 @@ def apply_timetable_slots(request, register_id):
     try:
         data = json.loads(request.body)
         slots = data.get("slots", [])
+        replace_existing = bool(data.get("replace_existing", True))
         update_register_details = bool(data.get("update_register_details"))
         subj_code = (data.get("subject_code") or "").strip()
         subj_name = (data.get("subject_name") or "").strip()
         fac_name = (data.get("faculty_name") or "").strip()
     except Exception:
         slots = []
+        replace_existing = True
         update_register_details = False
         subj_code, subj_name, fac_name = "", "", ""
 
     if not slots or not isinstance(slots, list):
         return JsonResponse({"status": "error", "message": "No valid slots provided to save."}, status=400)
+
+    default_from = register.term_start.isoformat() if register.term_start else None
+    default_to = register.term_end.isoformat() if register.term_end else None
 
     sanitized_slots = []
     for s in slots:
@@ -699,11 +704,13 @@ def apply_timetable_slots(request, register_id):
             "period": str(s.get("period", "1")).strip(),
             "start_time": s.get("start_time"),
             "end_time": s.get("end_time"),
-            "effective_from": s.get("effective_from") or None,
-            "effective_to": s.get("effective_to") or None,
+            "effective_from": s.get("effective_from") or default_from,
+            "effective_to": s.get("effective_to") or default_to,
         })
 
     def apply_changes(r):
+        if replace_existing:
+            r.timetable_entries.all().delete()
         save_rows(r, "timetable", sanitized_slots)
         if update_register_details and subj_code:
             r.subject_code = subj_code

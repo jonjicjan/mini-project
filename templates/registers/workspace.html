@@ -355,12 +355,12 @@
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr style="background: #ecfdf5; border-bottom: 2px solid #a7f3d0;">
-            <th style="padding: 10px; font-size: 12px; color: #065f46;">Day of Week</th>
-            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 90px;">Period</th>
-            <th style="padding: 10px; font-size: 12px; color: #065f46;">Start Time</th>
-            <th style="padding: 10px; font-size: 12px; color: #065f46;">End Time</th>
-            <th style="padding: 10px; font-size: 12px; color: #065f46;">Effective From</th>
-            <th style="padding: 10px; font-size: 12px; color: #065f46;">Effective To</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 130px;">Day</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 70px; text-align: center;">Period</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 175px;">Timing</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; min-width: 180px;">Matched Subject</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; min-width: 140px;">Timetable Text</th>
+            <th style="padding: 10px; font-size: 12px; color: #065f46; width: 220px;">Effective Dates</th>
             <th style="padding: 10px; font-size: 12px; color: #065f46; width: 60px; text-align: center;">Action</th>
           </tr>
         </thead>
@@ -370,15 +370,21 @@
       </table>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-      <button type="button" id="tt-add-slot-row-btn" class="button secondary small" style="border-color: #a7f3d0; color: #065f46;">
-        + Add Another Slot
-      </button>
-      <div style="display: flex; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+      <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <button type="button" id="tt-add-slot-row-btn" class="button secondary small" style="border-color: #a7f3d0; color: #065f46;">
+          + Add Another Slot
+        </button>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #065f46; cursor: pointer;">
+          <input type="checkbox" id="tt-replace-existing-checkbox" checked style="accent-color: #059669; cursor: pointer;">
+          <span>Replace existing timetable slots</span>
+        </label>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
         <button type="button" id="tt-cancel-results-btn" class="button secondary">Cancel</button>
-        <button type="button" id="tt-save-slots-btn" class="button primary" style="background: #059669; border-color: #047857;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Save Extracted Slots to Register</span>
+        <button type="button" id="tt-save-slots-btn" class="button primary" style="background: #059669; border-color: #047857; font-weight: 700; padding: 10px 22px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span id="tt-save-btn-text">Save Extracted Slots to Register</span>
         </button>
       </div>
     </div>
@@ -453,6 +459,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const subjectFilterInput = document.getElementById("tt-subject-filter");
   const termStartInput = document.getElementById("tt-term-start");
   const termEndInput = document.getElementById("tt-term-end");
+  const replaceExistingCheckbox = document.getElementById("tt-replace-existing-checkbox");
+  const saveBtnText = document.getElementById("tt-save-btn-text");
 
   if (!dropzone || !fileInput || !scanBtn) return;
 
@@ -595,8 +603,9 @@ document.addEventListener("DOMContentLoaded", function () {
         pill.type = "button";
         pill.className = "tt-subject-pill";
         const shortName = (ds.aliases && ds.aliases.find(a => a !== ds.code)) || ds.name.split(" ")[0];
-        pill.innerHTML = `<strong>${ds.code}</strong> (${shortName}) <span class="tt-pill-badge">${ds.slot_count || 0} slots</span>`;
-        pill.title = `${ds.code}: ${ds.name} (Faculty: ${ds.faculty || 'N/A'})`;
+        const dispCode = ds.display_code || ds.code;
+        pill.innerHTML = `<strong>${dispCode}</strong> (${shortName}) <span class="tt-pill-badge">${ds.slot_count || 0} slots</span>`;
+        pill.title = `${dispCode}: ${ds.name} (Faculty: ${ds.faculty || 'N/A'})`;
 
         pill.addEventListener("click", () => {
           selectSubject(ds, pill);
@@ -622,6 +631,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Find matching pill
         const matchIdx = detected.findIndex(ds =>
           ds.code.toUpperCase() === data.subject_filter.toUpperCase() ||
+          (ds.display_code && ds.display_code.toUpperCase() === data.subject_filter.toUpperCase()) ||
           (ds.aliases && ds.aliases.some(a => a.toUpperCase() === data.subject_filter.toUpperCase()))
         );
         if (matchIdx >= 0) {
@@ -658,6 +668,11 @@ document.addEventListener("DOMContentLoaded", function () {
     syncRegisterText.textContent = `Sync register to ${ds.code} - ${ds.name} (Faculty: ${ds.faculty || 'Ms/Mr'})`;
     syncRegisterCheckbox.checked = true;
 
+    const count = ds.slots ? ds.slots.length : 0;
+    if (saveBtnText) {
+      saveBtnText.textContent = `Set ${count} Slots in Timetable for ${ds.display_code || ds.code}`;
+    }
+
     displaySlots(ds.slots || []);
   }
 
@@ -668,6 +683,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     syncRegisterLabel.style.display = "none";
     const allSlots = (currentScanData && currentScanData.all_slots) ? currentScanData.all_slots : (currentScanData ? currentScanData.slots : []);
+    if (saveBtnText) {
+      saveBtnText.textContent = `Save All Extracted Slots (${allSlots.length}) to Timetable`;
+    }
     displaySlots(allSlots || []);
   }
 
@@ -699,6 +717,8 @@ document.addEventListener("DOMContentLoaded", function () {
           effective_from: s.effective_from || defaultFrom,
           effective_to: s.effective_to || defaultTo,
           raw_cell: s.raw_cell || "",
+          subject_code: s.subject_code || (currentSelectedSubject ? currentSelectedSubject.code : ""),
+          subject_name: s.subject_name || (currentSelectedSubject ? currentSelectedSubject.name : ""),
         });
       });
     }
@@ -715,27 +735,39 @@ document.addEventListener("DOMContentLoaded", function () {
       `<option value="${d}" ${d.toLowerCase() === (slot.weekday||'').toLowerCase() ? 'selected' : ''}>${d}</option>`
     ).join("");
 
+    const subjCodeBadge = slot.subject_code ? `<span class="badge" style="background: #ecfdf5; color: #065f46; font-weight: 700; border: 1px solid #a7f3d0; margin-right: 4px;">${slot.subject_code}</span>` : '';
+    const subjNameLabel = slot.subject_name ? `<span style="font-size: 11px; color: #475569; display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${slot.subject_name}">${slot.subject_name}</span>` : '<span style="font-size: 11px; color: #94a3b8;">—</span>';
+
     tr.innerHTML = `
       <td style="padding: 8px;">
-        <select class="tt-slot-input tt-slot-weekday">${dayOptions}</select>
-      </td>
-      <td style="padding: 8px;">
-        <input type="text" class="tt-slot-input tt-slot-period" value="${slot.period || '1'}" style="text-align: center;">
-      </td>
-      <td style="padding: 8px;">
-        <input type="time" class="tt-slot-input tt-slot-start" value="${slot.start_time || '09:00'}">
-      </td>
-      <td style="padding: 8px;">
-        <input type="time" class="tt-slot-input tt-slot-end" value="${slot.end_time || '10:00'}">
-      </td>
-      <td style="padding: 8px;">
-        <input type="date" class="tt-slot-input tt-slot-eff-from" value="${slot.effective_from || defaultFrom}">
-      </td>
-      <td style="padding: 8px;">
-        <input type="date" class="tt-slot-input tt-slot-eff-to" value="${slot.effective_to || defaultTo}">
+        <select class="tt-slot-input tt-slot-weekday" style="font-weight: 600;">${dayOptions}</select>
       </td>
       <td style="padding: 8px; text-align: center;">
-        <button type="button" class="action-btn-link text-danger tt-delete-row-btn" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; font-weight: bold;" title="Remove Slot">✕</button>
+        <input type="text" class="tt-slot-input tt-slot-period" value="${slot.period || '1'}" style="text-align: center; font-weight: 700; width: 44px; margin: 0 auto;">
+      </td>
+      <td style="padding: 8px;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="time" class="tt-slot-input tt-slot-start" value="${slot.start_time || '09:00'}" style="font-size: 12px; padding: 4px 6px;">
+          <span style="color: #94a3b8;">-</span>
+          <input type="time" class="tt-slot-input tt-slot-end" value="${slot.end_time || '10:00'}" style="font-size: 12px; padding: 4px 6px;">
+        </div>
+      </td>
+      <td style="padding: 8px;">
+        <div>${subjCodeBadge}</div>
+        ${subjNameLabel}
+      </td>
+      <td style="padding: 8px;">
+        <span style="font-family: monospace; font-size: 11px; color: #334155; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${slot.raw_cell || ''}">${slot.raw_cell || '—'}</span>
+      </td>
+      <td style="padding: 8px;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="date" class="tt-slot-input tt-slot-eff-from" value="${slot.effective_from || defaultFrom}" style="font-size: 11px; padding: 4px 6px;">
+          <span style="color: #94a3b8;">to</span>
+          <input type="date" class="tt-slot-input tt-slot-eff-to" value="${slot.effective_to || defaultTo}" style="font-size: 11px; padding: 4px 6px;">
+        </div>
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <button type="button" class="action-btn-link text-danger tt-delete-row-btn" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 18px; font-weight: bold; line-height: 1;" title="Remove this slot">×</button>
       </td>
     `;
 
@@ -751,6 +783,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function updateSlotsBadge() {
     const count = slotsTbody.querySelectorAll("tr").length;
     slotsBadge.textContent = count + " Slots";
+    if (saveBtnText && currentSelectedSubject) {
+      saveBtnText.textContent = `Set ${count} Slots in Timetable for ${currentSelectedSubject.display_code || currentSelectedSubject.code}`;
+    }
   }
 
   addSlotBtn.addEventListener("click", () => {
@@ -800,11 +835,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     saveSlotsBtn.disabled = true;
-    saveSlotsBtn.textContent = "Saving to Timetable...";
+    if (saveBtnText) saveBtnText.textContent = "Saving to Timetable...";
 
     const doSync = syncRegisterCheckbox && syncRegisterCheckbox.checked && currentSelectedSubject;
+    const replaceExisting = replaceExistingCheckbox ? replaceExistingCheckbox.checked : true;
     const payload = {
       slots: slotsToSave,
+      replace_existing: Boolean(replaceExisting),
       update_register_details: Boolean(doSync),
       subject_code: doSync ? currentSelectedSubject.code : "",
       subject_name: doSync ? currentSelectedSubject.name : "",
