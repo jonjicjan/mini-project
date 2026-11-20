@@ -79,6 +79,41 @@ COMMON_SUBJECT_ALIASES: Dict[str, List[str]] = {
     "BAI586": ["BAI586", "BA1586", "MINI PROJECT"],
 }
 
+COURSE_CODE_REGEX = re.compile(
+    r"\b([A-Z]{2,5}\d{2,4}[A-Z]?|\d{2}[A-Z]{2,5}\d{2,4}[A-Z]?)\b",
+    re.IGNORECASE,
+)
+
+ACRONYM_REGEX = re.compile(
+    r"\b([A-Z]{2,6}(?:&[A-Z]{2,6})?)\b"
+)
+
+IGNORE_CELL_WORDS = {
+    "MON", "MONDAY", "TUE", "TUESDAY", "WED", "WEDNESDAY", "THU", "THUR", "THURSDAY", "FRI", "FRIDAY",
+    "SAT", "SATURDAY", "SUN", "SUNDAY", "PERIOD", "TIME", "DAY", "HOUR", "SLOT", "AM", "PM", "ROOM",
+    "CLASS", "SEC", "SECTION", "DEPT", "BREAK", "TEA", "LUNCH", "RECESS", "FREE", "W.E.F", "WEF",
+    "HEAD", "HOD", "PRIN", "PRINCIPAL", "SIGN", "SIGNATURE", "SUBJECT", "CODE", "FACULTY", "NAME",
+    "SL.NO", "NO", "TOTAL", "KSIT", "OB", "CR", "LH", "BATCH", "B1", "B2", "B3", "406A", "406B"
+}
+
+
+def clean_ocr_typos(text: str) -> str:
+    """Normalize common OCR misrecognitions and substitutions in timetable text."""
+    if not text:
+        return ""
+    res = text
+    # TOC misreads
+    res = re.sub(r"[•·*]\s*(?:roc|TOC|roc)\b", "TOC", res, flags=re.IGNORECASE)
+    res = re.sub(r"\b•roc\b", "TOC", res, flags=re.IGNORECASE)
+    # BCS51SC / BCS5 1 SC -> BCS515C
+    res = re.sub(r"\bBCS51S([A-Z])\b", r"BCS515\1", res, flags=re.IGNORECASE)
+    res = re.sub(r"\bBCS51\s+([A-Z0-9])\s*([A-Z])\b", r"BCS515\2", res, flags=re.IGNORECASE)
+    # BA1586 -> BAI586
+    res = re.sub(r"\bBA1(\d{3})\b", r"BAI\1", res, flags=re.IGNORECASE)
+    # BAILS04 -> BAIL504
+    res = re.sub(r"\bBAILS(\d{2})\b", r"BAIL5\1", res, flags=re.IGNORECASE)
+    return res
+
 
 def extract_text_from_pdf(file_bytes_or_stream) -> str:
     """Extract all text pages from an uploaded PDF document."""
@@ -118,6 +153,7 @@ def normalize_time(hour: int, minute: int, am_pm: Optional[str] = None) -> time:
 def extract_time_ranges_from_line(line: str) -> List[Tuple[time, time, str]]:
     """Find all time ranges in a single line or header."""
     matches = []
+    # Support formats: "08:30-09:25", "9.25 AM to 10.20 AM", "1:15-2:10", "14:00 - 15:00"
     for m in TIME_RANGE_REGEX.finditer(line):
         h1, m1, ap1, h2, m2, ap2 = m.groups()
         if ap2 and not ap1:
@@ -255,7 +291,7 @@ def extract_subjects_from_timetable_words(
     footer_headers = [
         w["y"]
         for w in words
-        if any(kw in w.get("text", "").upper() for kw in ["SUBJECT", "CODE", "FACULTY", "SL.NO", "NAME OF THE"])
+        if any(kw in w.get("text", "").upper() for kw in ["SUBJECT", "CODE", "FACULTY", "SL.NO", "NAME OF THE", "STAFF"])
         and w.get("y", 0) > img_height * 0.4
     ]
     footer_y = min(footer_headers) - 8 if footer_headers else (img_height * 0.52)
@@ -302,14 +338,7 @@ def extract_subjects_from_timetable_words(
             continue
 
         # Clean OCR text and common optical substitutions
-        clean_code = (
-            code_text.replace("BCS51\b", "BCS515C")
-            .replace("BA1586", "BAI586")
-            .replace("BAILS04", "BAIL504")
-            .replace("BAIL504", "BAIL504")
-        )
-        if clean_code.startswith("BCS51") and not clean_code.endswith("C"):
-            clean_code = "BCS515C"
+        clean_code = clean_ocr_typos(code_text)
         primary_code = clean_code.split("/")[0].split()[0]
 
         if not re.match(r"^[A-Z0-9]{3,}$", primary_code):
@@ -384,6 +413,43 @@ def extract_subjects_from_timetable_words(
     return detected_subjects
 
 
+def detect_layout_orientation_and_days(
+    words: List[Dict[str, Any]], W: float, H: float
+) -> Tuple[str, List[str]]:
+    """Detect whether days are in rows (standard) or in columns (inverted), and whether Saturday is included."""
+    detected_days = []
+    has_saturday = False
+
+    for w in words:
+        clean = re.sub(r"[^A-Z]", "", w.get("text", "").upper())
+        if clean in ("SAT", "SATURDAY"):
+            has_saturday = True
+        for day_num, pattern in WEEKDAY_PATTERNS.items():
+            if pattern.search(w.get("text", "")):
+                detected_days.append(
+                    {
+                        "day": WEEKDAY_NAMES[day_num],
+                        "cx": w["x"] + w["w"] / 2,
+                        "cy": w["y"] + w["h"] / 2,
+                    }
+                )
+                break
+
+    # Determine working days list
+    base_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    if has_saturday:
+        base_days.append("Saturday")
+
+    # If weekdays are spread horizontally across the top (X span > 0.35 * W, Y < 0.35 * H)
+    top_days = [d for d in detected_days if d["cy"] < H * 0.35]
+    if len(top_days) >= 3:
+        xs = [d["cx"] for d in top_days]
+        if (max(xs) - min(xs)) > 0.35 * W:
+            return "DAYS_IN_COLUMNS", base_days
+
+    return "DAYS_IN_ROWS", base_days
+
+
 def extract_slots_from_spatial_words(
     words: List[Dict[str, Any]],
     *,
@@ -394,21 +460,21 @@ def extract_slots_from_spatial_words(
     term_start: Optional[date] = None,
     term_end: Optional[date] = None,
 ) -> Dict[str, Any]:
-    """Parse slots from 2D OCR word coordinates (Day rows × Period columns).
-    
-    Dynamically adapts grid boundary coordinates to match any resolution or layout.
-    """
+    """Parse slots from 2D OCR word coordinates across any timetable format, orientation, or resolution."""
     eff_from_str = term_start.isoformat() if term_start else ""
     eff_to_str = term_end.isoformat() if term_end else ""
 
     W = float(img_width) if img_width else 1024.0
     H = float(img_height) if img_height else 887.0
 
-    # 1. Dynamic Grid Boundary Detection
+    # 1. Orientation & Days Detection
+    orientation, day_names = detect_layout_orientation_and_days(words, W, H)
+
+    # 2. Grid Boundary Detection
     footer_headers = [
         w["y"]
         for w in words
-        if any(kw in w.get("text", "").upper() for kw in ["SUBJECT", "CODE", "FACULTY", "SL.NO", "NAME OF THE"])
+        if any(kw in w.get("text", "").upper() for kw in ["SUBJECT", "CODE", "FACULTY", "SL.NO", "NAME OF THE", "STAFF"])
         and w.get("y", 0) > H * 0.4
     ]
     grid_bottom_y = (min(footer_headers) - 8) if footer_headers else (H * 0.53)
@@ -416,102 +482,223 @@ def extract_slots_from_spatial_words(
     header_candidates = [
         w["y"] + w["h"]
         for w in words
-        if any(kw in w.get("text", "").upper() for kw in ["PERIOD", "TIME", "8:30", "9.25", "10.35"])
+        if any(kw in w.get("text", "").upper() for kw in ["PERIOD", "TIME", "8:30", "9.25", "10.35", "DAY"])
         and w.get("y", 0) < H * 0.35
     ]
     grid_top_y = (max(header_candidates) + 6) if header_candidates else (H * 0.245)
 
-    # Extract detected subjects from footer table
+    # Extract detected subjects from reference table (if present)
     detected_subjects = extract_subjects_from_timetable_words(words, raw_text, img_width=W, img_height=H)
 
-    # 2. Dynamic Day Rows (Monday through Friday)
-    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    row_height = (grid_bottom_y - grid_top_y) / len(day_names)
-    day_rows = [(d, grid_top_y + i * row_height, grid_top_y + (i + 1) * row_height) for i, d in enumerate(day_names)]
-
-    # 3. Dynamic Period Columns proportional to image width
-    col_boundaries = [
-        ("1", 0.078 * W, 0.180 * W, "08:30", "09:25"),
-        ("2", 0.180 * W, 0.288 * W, "09:25", "10:20"),
-        ("3", 0.360 * W, 0.490 * W, "10:35", "11:30"),
-        ("4", 0.490 * W, 0.605 * W, "11:30", "12:25"),
-        ("5", 0.695 * W, 0.795 * W, "13:15", "14:10"),
-        ("6", 0.795 * W, 0.898 * W, "14:10", "15:05"),
-        ("7", 0.898 * W, 1.000 * W, "15:05", "16:00"),
-    ]
-
-    # 4. Extract all slots across the matrix
     all_slots: List[Dict[str, Any]] = []
-    for day_name, y1, y2 in day_rows:
-        # Check for multi-period spanning lab in morning (P3-P4)
-        p34_words = [
-            w["text"]
-            for w in words
-            if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.360 * W) <= (w["x"] + w["w"] / 2) <= (0.605 * W)
-        ]
-        p34_text = " ".join(p34_words).upper()
-        is_p34_lab = "LAB" in p34_text and any(b in p34_text for b in ["B1", "B2", "406A", "406B"])
 
-        # Check for multi-period spanning activity in afternoon (P5-P7)
-        pm_span_words = [
-            w["text"]
-            for w in words
-            if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.695 * W) <= (w["x"] + w["w"] / 2) <= W
-        ]
-        pm_span_text = " ".join(pm_span_words).upper()
-        is_pm_span = any(
-            kw in pm_span_text for kw in ["SKILL LAB", "MINI PROJECT", "NSS", "SPORTS", "YOGA"]
-        )
+    if orientation == "DAYS_IN_ROWS":
+        # Standard Layout: Rows = Weekdays, Columns = Periods
+        num_days = len(day_names)
+        row_height = (grid_bottom_y - grid_top_y) / max(num_days, 1)
+        day_rows = [(d, grid_top_y + i * row_height, grid_top_y + (i + 1) * row_height) for i, d in enumerate(day_names)]
 
-        for p_num, x1, x2, st, et in col_boundaries:
-            cell_words = [
-                w["text"]
-                for w in words
-                if y1 <= (w["y"] + w["h"] / 2) <= y2 and x1 <= (w["x"] + w["w"] / 2) <= x2
+        # Determine period columns
+        is_ksit = any("KSIT" in w.get("text", "").upper() or "OB-403" in w.get("text", "").upper() for w in words)
+        if is_ksit or any("8:30" in w.get("text", "") for w in words):
+            col_boundaries = [
+                ("1", 0.078 * W, 0.180 * W, "08:30", "09:25"),
+                ("2", 0.180 * W, 0.288 * W, "09:25", "10:20"),
+                ("3", 0.360 * W, 0.490 * W, "10:35", "11:30"),
+                ("4", 0.490 * W, 0.605 * W, "11:30", "12:25"),
+                ("5", 0.695 * W, 0.795 * W, "13:15", "14:10"),
+                ("6", 0.795 * W, 0.898 * W, "14:10", "15:05"),
+                ("7", 0.898 * W, 1.000 * W, "15:05", "16:00"),
+            ]
+        else:
+            # Universal column proportional subdivision (standard 6-period default)
+            col_boundaries = [
+                ("1", 0.12 * W, 0.26 * W, "09:00", "10:00"),
+                ("2", 0.26 * W, 0.40 * W, "10:00", "11:00"),
+                ("3", 0.40 * W, 0.55 * W, "11:15", "12:15"),
+                ("4", 0.55 * W, 0.70 * W, "13:15", "14:15"),
+                ("5", 0.70 * W, 0.85 * W, "14:15", "15:15"),
+                ("6", 0.85 * W, 1.00 * W, "15:15", "16:15"),
             ]
 
-            if not cell_words:
-                if is_p34_lab and p_num in ("3", "4"):
+        for day_name, y1, y2 in day_rows:
+            # Check multi-period spans
+            p34_words = [
+                w["text"]
+                for w in words
+                if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.360 * W) <= (w["x"] + w["w"] / 2) <= (0.605 * W)
+            ]
+            p34_text = " ".join(p34_words).upper()
+            is_p34_lab = "LAB" in p34_text and any(b in p34_text for b in ["B1", "B2", "406A", "406B"])
+
+            pm_span_words = [
+                w["text"]
+                for w in words
+                if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.695 * W) <= (w["x"] + w["w"] / 2) <= W
+            ]
+            pm_span_text = " ".join(pm_span_words).upper()
+            is_pm_span = any(
+                kw in pm_span_text for kw in ["SKILL LAB", "MINI PROJECT", "NSS", "SPORTS", "YOGA"]
+            )
+
+            for p_num, x1, x2, st, et in col_boundaries:
+                cell_words = [
+                    w["text"]
+                    for w in words
+                    if y1 <= (w["y"] + w["h"] / 2) <= y2 and x1 <= (w["x"] + w["w"] / 2) <= x2
+                ]
+
+                if not cell_words:
+                    if is_p34_lab and p_num in ("3", "4"):
+                        cell_words = p34_words
+                    elif is_pm_span and p_num in ("5", "6", "7"):
+                        cell_words = pm_span_words
+                elif is_p34_lab and p_num in ("3", "4"):
                     cell_words = p34_words
                 elif is_pm_span and p_num in ("5", "6", "7"):
                     cell_words = pm_span_words
-            elif is_p34_lab and p_num in ("3", "4"):
-                cell_words = p34_words
-            elif is_pm_span and p_num in ("5", "6", "7"):
-                cell_words = pm_span_words
 
-            raw_cell = " ".join(cell_words).strip()
-            if not raw_cell:
-                continue
+                raw_cell = clean_ocr_typos(" ".join(cell_words).strip())
+                if not raw_cell:
+                    continue
 
-            raw_upper = raw_cell.upper()
-            matched_subjects = []
-            for ds in detected_subjects:
-                aliases = [a.upper() for a in ds["aliases"]]
-                if any(re.search(r"\b" + re.escape(a) + r"\b", raw_upper) for a in aliases) or any(
-                    a in raw_upper for a in aliases
-                ):
-                    matched_subjects.append(ds)
+                all_slots.append(
+                    {
+                        "weekday": day_name,
+                        "period": p_num,
+                        "start_time": st,
+                        "end_time": et,
+                        "effective_from": eff_from_str,
+                        "effective_to": eff_to_str,
+                        "raw_cell": raw_cell,
+                        "subject_code": "",
+                        "subject_name": "",
+                        "faculty_name": "",
+                        "all_matched_codes": [],
+                    }
+                )
+    else:
+        # Inverted Layout: Columns = Weekdays, Rows = Periods
+        num_days = len(day_names)
+        col_w = (W * 0.85) / max(num_days, 1)
+        day_cols = [(d, 0.15 * W + i * col_w, 0.15 * W + (i + 1) * col_w) for i, d in enumerate(day_names)]
 
-            primary_subject = matched_subjects[0] if matched_subjects else None
+        # Row periods (typically 4 to 8 periods down the Y-axis)
+        period_rows = [
+            ("1", grid_top_y + 0 * 50, grid_top_y + 1 * 50, "09:00", "10:00"),
+            ("2", grid_top_y + 1 * 50, grid_top_y + 2 * 50, "10:00", "11:00"),
+            ("3", grid_top_y + 2 * 50, grid_top_y + 3 * 50, "11:15", "12:15"),
+            ("4", grid_top_y + 3 * 50, grid_top_y + 4 * 50, "13:15", "14:15"),
+            ("5", grid_top_y + 4 * 50, grid_top_y + 5 * 50, "14:15", "15:15"),
+            ("6", grid_top_y + 5 * 50, grid_top_y + 6 * 50, "15:15", "16:15"),
+        ]
 
-            all_slots.append(
-                {
-                    "weekday": day_name,
-                    "period": p_num,
-                    "start_time": st,
-                    "end_time": et,
-                    "effective_from": eff_from_str,
-                    "effective_to": eff_to_str,
-                    "raw_cell": raw_cell,
-                    "subject_code": primary_subject["code"] if primary_subject else "",
-                    "subject_name": primary_subject["name"] if primary_subject else "",
-                    "faculty_name": primary_subject["faculty"] if primary_subject else "",
-                    "all_matched_codes": [s["code"] for s in matched_subjects],
-                }
-            )
+        for p_num, y1, y2, st, et in period_rows:
+            for day_name, x1, x2 in day_cols:
+                cell_words = [
+                    w["text"]
+                    for w in words
+                    if y1 <= (w["y"] + w["h"] / 2) <= y2 and x1 <= (w["x"] + w["w"] / 2) <= x2
+                ]
+                raw_cell = clean_ocr_typos(" ".join(cell_words).strip())
+                if not raw_cell:
+                    continue
 
-    # 5. Associate specific slots with each detected subject (handling theory vs lab)
+                all_slots.append(
+                    {
+                        "weekday": day_name,
+                        "period": p_num,
+                        "start_time": st,
+                        "end_time": et,
+                        "effective_from": eff_from_str,
+                        "effective_to": eff_to_str,
+                        "raw_cell": raw_cell,
+                        "subject_code": "",
+                        "subject_name": "",
+                        "faculty_name": "",
+                        "all_matched_codes": [],
+                    }
+                )
+
+    # 3. Universal In-Cell Subject Discovery
+    # If timetable has no footer table or omitted some subjects, discover them from cells!
+    for s in all_slots:
+        raw_cell = s.get("raw_cell", "")
+        # Look for course codes
+        codes = COURSE_CODE_REGEX.findall(raw_cell)
+        for code in codes:
+            ucode = code.upper()
+            if ucode not in IGNORE_CELL_WORDS and not any(ds["code"].upper() == ucode for ds in detected_subjects):
+                is_lab = "LAB" in raw_cell.upper()
+                disp = f"{ucode} (LAB)" if is_lab and not ucode.endswith("LAB") else ucode
+                detected_subjects.append(
+                    {
+                        "code": ucode,
+                        "display_code": disp,
+                        "is_lab": is_lab,
+                        "name": ucode,
+                        "faculty": "",
+                        "aliases": [ucode],
+                        "slot_count": 0,
+                        "slots": [],
+                    }
+                )
+
+        # If no standard course code found in cell, check uppercase subject acronym or lab
+        if not codes:
+            lab_match = re.search(r"\b([A-Z0-9\s&]+LAB(?:ORATORY)?)\b", raw_cell, flags=re.IGNORECASE)
+            if lab_match:
+                lname = lab_match.group(1).strip().upper()
+                if lname not in IGNORE_CELL_WORDS and not any(ds["code"].upper() == lname for ds in detected_subjects):
+                    detected_subjects.append(
+                        {
+                            "code": lname,
+                            "display_code": lname,
+                            "is_lab": True,
+                            "name": lname,
+                            "faculty": "",
+                            "aliases": [lname],
+                            "slot_count": 0,
+                            "slots": [],
+                        }
+                    )
+            else:
+                acronyms = ACRONYM_REGEX.findall(raw_cell)
+                for a in acronyms:
+                    ua = a.strip().upper()
+                    if ua not in IGNORE_CELL_WORDS and len(ua) >= 2 and not ua.isdigit():
+                        if not any(ds["code"].upper() == ua or ua in [al.upper() for al in ds["aliases"]] for ds in detected_subjects):
+                            detected_subjects.append(
+                                {
+                                    "code": ua,
+                                    "display_code": ua,
+                                    "is_lab": False,
+                                    "name": ua,
+                                    "faculty": "",
+                                    "aliases": [ua],
+                                    "slot_count": 0,
+                                    "slots": [],
+                                }
+                            )
+
+    # 4. Tag every slot with matched subjects
+    for s in all_slots:
+        raw_upper = s["raw_cell"].upper()
+        matched = []
+        for ds in detected_subjects:
+            aliases = [a.upper() for a in ds["aliases"]]
+            if any(re.search(r"\b" + re.escape(a) + r"\b", raw_upper) for a in aliases) or any(
+                a in raw_upper for a in aliases
+            ):
+                matched.append(ds)
+
+        primary = matched[0] if matched else None
+        s["subject_code"] = primary["code"] if primary else ""
+        s["subject_name"] = primary["name"] if primary else ""
+        s["faculty_name"] = primary["faculty"] if primary else ""
+        s["all_matched_codes"] = [m["code"] for m in matched]
+
+    # 5. Populate specific slots for each detected subject
     for ds in detected_subjects:
         aliases_upper = [a.upper() for a in ds["aliases"]]
         subj_slots = []
@@ -527,7 +714,6 @@ def extract_slots_from_spatial_words(
                     if cell_is_lab:
                         subj_slots.append(s)
                 else:
-                    # For a theory course that has a sister lab with same code (e.g. BCS502)
                     has_sister_lab = any(
                         other != ds and other["code"] == ds["code"] and other.get("is_lab")
                         for other in detected_subjects
@@ -541,13 +727,12 @@ def extract_slots_from_spatial_words(
         ds["slot_count"] = len(subj_slots)
         ds["slots"] = subj_slots
 
-    # 6. Filter for target subject if provided
+    # 6. Apply subject filter
     filter_matched = True
     matched_slots: List[Dict[str, Any]] = []
 
     if subject_filter and subject_filter.strip():
         clean_target = subject_filter.strip().upper()
-        # Look for matching subject in detected_subjects
         matching_subj = next(
             (
                 ds
@@ -562,7 +747,6 @@ def extract_slots_from_spatial_words(
         if matching_subj and matching_subj.get("slots"):
             matched_slots = matching_subj["slots"]
         else:
-            # Fallback to alias search across all slots
             target_aliases = get_subject_aliases(subject_filter, raw_text)
             for s in all_slots:
                 cell_up = s["raw_cell"].upper()
@@ -571,7 +755,6 @@ def extract_slots_from_spatial_words(
 
         if not matched_slots:
             filter_matched = False
-            # When filter has 0 matches, default to all slots so user sees the schedule!
             matched_slots = all_slots
     else:
         matched_slots = all_slots
@@ -595,8 +778,8 @@ def parse_timetable_text(
     term_start: Optional[date] = None,
     term_end: Optional[date] = None,
 ) -> Dict[str, Any]:
-    """Parse raw OCR or PDF timetable text into structured timetable slots."""
-    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+    """Parse raw OCR or PDF timetable text into structured timetable slots across any layout."""
+    lines = [clean_ocr_typos(line.strip()) for line in raw_text.splitlines() if line.strip()]
     slots: List[Dict[str, Any]] = []
 
     clean_filter = subject_filter.strip().upper() if subject_filter and subject_filter.strip() else None
@@ -604,7 +787,7 @@ def parse_timetable_text(
     eff_from_str = term_start.isoformat() if term_start else ""
     eff_to_str = term_end.isoformat() if term_end else ""
 
-    # Strategy 1: Grid Header Detection (Times/Periods in header, Days in rows)
+    # Strategy 1A: Times in Header, Days in Rows (Standard Grid)
     time_headers: List[Tuple[time, time, str]] = []
     header_line_idx = -1
     for idx, line in enumerate(lines[:10]):
@@ -653,6 +836,53 @@ def parse_timetable_text(
                         "raw_cell": cell_text or f"Slot {slot_idx + 1}",
                     }
                 )
+
+    # Strategy 1B: Days in Header, Times/Periods in Rows (Inverted Grid)
+    if not slots:
+        day_headers: List[Tuple[int, str]] = []
+        header_row_idx = -1
+        for idx, line in enumerate(lines[:6]):
+            tokens = [t.strip() for t in (line.split("\t") if "\t" in line else line.split("|") if "|" in line else line.split()) if t.strip()]
+            detected_day_cols = []
+            for c_idx, token in enumerate(tokens):
+                d_num = match_weekday(token)
+                if d_num is not None:
+                    detected_day_cols.append((c_idx, WEEKDAY_NAMES[d_num]))
+            if len(detected_day_cols) >= 3:
+                header_row_idx = idx
+                day_headers = detected_day_cols
+                break
+
+        if day_headers:
+            period_counter = 1
+            for idx in range(header_row_idx + 1, len(lines)):
+                line = lines[idx]
+                tokens = [t.strip() for t in (line.split("\t") if "\t" in line else line.split("|") if "|" in line else line.split()) if t.strip()]
+                time_ranges = extract_time_ranges_from_line(line)
+                st = time_ranges[0][0].strftime("%H:%M") if time_ranges else f"{8 + period_counter:02d}:00"
+                et = time_ranges[0][1].strftime("%H:%M") if time_ranges else f"{9 + period_counter:02d}:00"
+
+                p_match = PERIOD_REGEX.search(line)
+                p_val = p_match.group(1) if p_match else str(period_counter)
+
+                for col_idx, d_name in day_headers:
+                    if col_idx < len(tokens):
+                        cell_val = tokens[col_idx]
+                        if cell_val and match_weekday(cell_val) is None and not any(ign in cell_val.upper() for ign in ["LUNCH", "BREAK", "TEA", "RECESS", "FREE"]):
+                            if clean_filter and not any(a in cell_val.upper() for a in aliases):
+                                continue
+                            slots.append(
+                                {
+                                    "weekday": d_name,
+                                    "period": p_val,
+                                    "start_time": st,
+                                    "end_time": et,
+                                    "effective_from": eff_from_str,
+                                    "effective_to": eff_to_str,
+                                    "raw_cell": cell_val,
+                                }
+                            )
+                period_counter += 1
 
     # Strategy 2: Line-by-Line / Tabular extraction
     if not slots:
@@ -716,8 +946,40 @@ def parse_timetable_text(
     day_order = {name: i for i, name in enumerate(WEEKDAY_NAMES)}
     unique_slots.sort(key=lambda s: (day_order.get(s["weekday"], 9), s["start_time"]))
 
+    # Synthesize detected subjects from parsed slots
+    detected_subjects: List[Dict[str, Any]] = []
+    found_codes = set()
+    for s in unique_slots:
+        cell_text = s.get("raw_cell", "")
+        codes = COURSE_CODE_REGEX.findall(cell_text)
+        for code in codes:
+            ucode = code.upper()
+            if ucode not in IGNORE_CELL_WORDS and ucode not in found_codes:
+                found_codes.add(ucode)
+                is_lab = "LAB" in cell_text.upper()
+                detected_subjects.append(
+                    {
+                        "code": ucode,
+                        "display_code": f"{ucode} (LAB)" if is_lab and not ucode.endswith("LAB") else ucode,
+                        "is_lab": is_lab,
+                        "name": ucode,
+                        "faculty": "",
+                        "aliases": [ucode],
+                        "slot_count": 0,
+                        "slots": [],
+                    }
+                )
+
+    for ds in detected_subjects:
+        ds_slots = [s for s in unique_slots if ds["code"].upper() in s["raw_cell"].upper()]
+        ds["slot_count"] = len(ds_slots)
+        ds["slots"] = ds_slots
+
     return {
+        "status": "ok",
         "slots": unique_slots,
+        "all_slots": unique_slots,
+        "detected_subjects": detected_subjects,
         "total_extracted": len(unique_slots),
         "raw_text": raw_text,
     }

@@ -135,3 +135,62 @@ def test_parse_ksit_master_timetable_detected_subjects():
     assert "BAI586" in codes
     assert len(result["all_slots"]) >= 30
 
+
+def test_parse_inverted_grid_timetable():
+    """Test timetable with days in columns and periods/times in rows."""
+    inverted_text = """
+    PERIOD / TIME    MONDAY        TUESDAY       WEDNESDAY     THURSDAY      FRIDAY        SATURDAY
+    08:30 - 09:25    21CS51        MAT101        ENG102        21CS51        PHY103        CIV104
+    09:25 - 10:20    MAT101        21CS51        PHY103        MAT101        21CS51        ENG102
+    10:35 - 11:30    CHEM105       CIV104        21CS51        ENG102        CHEM105       21CS51
+    """
+    result = parse_timetable_text(inverted_text, subject_filter="21CS51")
+    assert result["total_extracted"] == 6
+    weekdays = {s["weekday"] for s in result["slots"]}
+    assert "Monday" in weekdays
+    assert "Tuesday" in weekdays
+    assert "Wednesday" in weekdays
+    assert "Thursday" in weekdays
+    assert "Friday" in weekdays
+    assert "Saturday" in weekdays
+
+    mon_slot = next(s for s in result["slots"] if s["weekday"] == "Monday")
+    assert mon_slot["period"] == "1"
+    assert mon_slot["start_time"] == "08:30"
+    assert mon_slot["end_time"] == "09:25"
+
+
+def test_timetable_without_reference_table_synthesizes_subjects():
+    """Test text timetable without any reference footer extracts subjects directly from cells."""
+    grid_text = """
+    DAY / TIME    09:00-10:00    10:00-11:00    11:15-12:15    01:00-02:00
+    MONDAY        CS101          EC202          MAT301         CS101 LAB
+    TUESDAY       MAT301         CS101          EC202          ME401
+    WEDNESDAY     EC202          MAT301         CS101          LUNCH
+    """
+    result = parse_timetable_text(grid_text)
+    assert result["total_extracted"] == 11
+    detected = result["detected_subjects"]
+    codes = [d["code"] for d in detected]
+    assert "CS101" in codes
+    assert "EC202" in codes
+    assert "MAT301" in codes
+    assert "ME401" in codes
+
+
+def test_clean_ocr_typos_and_code_regex():
+    from scheduling.timetable_parser import clean_ocr_typos, COURSE_CODE_REGEX
+
+    assert clean_ocr_typos("•roc") == "TOC"
+    assert clean_ocr_typos("BCS51SC") == "BCS515C"
+    assert clean_ocr_typos("BA1586") == "BAI586"
+    assert clean_ocr_typos("BAILS04") == "BAIL504"
+
+    # Diverse university course formats
+    sample_codes = ["BCS501", "21CS51", "18EC71", "MAT101", "CS101", "BCA201", "MBA104"]
+    for code in sample_codes:
+        match = COURSE_CODE_REGEX.search(f"Room 101 {code} Class")
+        assert match is not None
+        assert match.group(1).upper() == code
+
+
