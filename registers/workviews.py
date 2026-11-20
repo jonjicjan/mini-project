@@ -1,4 +1,5 @@
 from datetime import date
+import functools
 import json
 import logging
 import uuid
@@ -583,7 +584,25 @@ def export_preview(request, export_id):
 logger = logging.getLogger(__name__)
 
 
-@login_required
+def api_login_required(view_func):
+    """Ensure user is authenticated for API requests, returning 401 JSON instead of 302 HTML redirect."""
+    @functools.wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "code": "unauthenticated",
+                    "message": "Your session has expired. Please log in again to continue.",
+                    "login_url": reverse("login"),
+                },
+                status=401,
+            )
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+
+@api_login_required
 @never_cache
 @require_http_methods(["POST"])
 def parse_timetable_upload(request, register_id):
@@ -591,7 +610,11 @@ def parse_timetable_upload(request, register_id):
     
     Parses day of week, periods, time windows, and detects subjects & faculty from timetable sheets.
     """
-    register = owned_register(request.user, register_id)
+    try:
+        register = owned_register(request.user, register_id)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=404)
+
     subject_filter = request.POST.get("subject_filter", "").strip() or register.subject_code or ""
     raw_text = request.POST.get("raw_text", "").strip()
     uploaded_file = request.FILES.get("file")
@@ -668,12 +691,16 @@ def parse_timetable_upload(request, register_id):
     )
 
 
-@login_required
+@api_login_required
 @never_cache
 @require_http_methods(["POST"])
 def apply_timetable_slots(request, register_id):
     """Save user-reviewed timetable slots into the register atomically."""
-    register = owned_register(request.user, register_id)
+    try:
+        register = owned_register(request.user, register_id)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=404)
+
     if register.archived_at:
         return JsonResponse({"status": "error", "message": "Restore this register before changing its records."}, status=400)
 

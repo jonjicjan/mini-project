@@ -246,6 +246,7 @@
 {% if tab == 'timetable' and not register.archived_at %}
 <!-- UPLOAD TIMETABLE (IMAGE OR PDF) SECTION -->
 <section class="panel spaced timetable-ocr-panel" style="border: 2px dashed #059669; background: #f0fdf4; border-radius: 14px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.06);">
+  {% csrf_token %}
   <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
     <div>
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
@@ -568,7 +569,31 @@ document.addEventListener("DOMContentLoaded", function () {
         body: formData,
       });
 
-      const data = await resp.json();
+      if (resp.redirected && resp.url.includes("login")) {
+        alert("Your session has expired. Please log in to continue.");
+        window.location.href = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      let data;
+      if (contentType.includes("application/json")) {
+        data = await resp.json();
+      } else {
+        const text = await resp.text();
+        if (resp.status === 401 || text.includes("login") || text.includes("<form")) {
+          alert("Your session has expired. Redirecting to login page...");
+          window.location.href = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+          return;
+        }
+        throw new Error("Server returned an invalid response (" + resp.status + "). Please refresh the page.");
+      }
+
+      if (resp.status === 401 || (data && data.code === "unauthenticated")) {
+        alert(data.message || "Your session has expired. Redirecting to login...");
+        window.location.href = (data.login_url || "{% url 'login' %}") + "?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
 
       if (!resp.ok || data.status !== "ok") {
         throw new Error(data.message || "Failed to parse timetable file.");
@@ -857,7 +882,33 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         body: JSON.stringify(payload),
       });
-      const data = await resp.json();
+
+      if (resp.redirected && resp.url.includes("login")) {
+        alert("Your session has expired. Please log in to continue.");
+        window.location.href = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      let data;
+      if (contentType.includes("application/json")) {
+        data = await resp.json();
+      } else {
+        const text = await resp.text();
+        if (resp.status === 401 || text.includes("login") || text.includes("<form")) {
+          alert("Your session has expired. Redirecting to login page...");
+          window.location.href = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+          return;
+        }
+        throw new Error("Server returned an invalid response (" + resp.status + ").");
+      }
+
+      if (resp.status === 401 || (data && data.code === "unauthenticated")) {
+        alert(data.message || "Your session has expired. Redirecting to login...");
+        window.location.href = (data.login_url || "{% url 'login' %}") + "?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
+
       if (!resp.ok || data.status !== "ok") {
         throw new Error(data.message || "Failed to save timetable slots.");
       }
