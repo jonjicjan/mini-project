@@ -31,6 +31,7 @@ from registers.paste import FIELDS, preview_paste
 from registers.services import owned_register
 from scheduling.timetable_parser import (
     extract_text_from_pdf,
+    parse_timetable_file,
     parse_timetable_from_image,
     parse_timetable_text,
 )
@@ -606,7 +607,7 @@ def api_login_required(view_func):
 @never_cache
 @require_http_methods(["POST"])
 def parse_timetable_upload(request, register_id):
-    """Process an uploaded timetable file (PDF, text) or image OCR.
+    """Process an uploaded timetable file (PDF, image, text) with the 7-stage recognition engine.
     
     Parses day of week, periods, time windows, and detects subjects & faculty from timetable sheets.
     """
@@ -620,46 +621,35 @@ def parse_timetable_upload(request, register_id):
     uploaded_file = request.FILES.get("file")
 
     if uploaded_file:
-        filename = uploaded_file.name.lower()
-        if filename.endswith(".pdf"):
-            try:
-                extracted = extract_text_from_pdf(uploaded_file)
-                raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
-            except Exception as e:
-                logger.exception("PDF timetable extraction failed")
-                return JsonResponse({"status": "error", "message": f"Could not read PDF: {e}"}, status=400)
-        elif any(filename.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp"]):
-            try:
-                parsed = parse_timetable_from_image(
-                    uploaded_file,
-                    subject_filter=subject_filter,
-                    term_start=register.term_start,
-                    term_end=register.term_end,
-                )
-                return JsonResponse(
-                    {
-                        "status": "ok",
-                        "slots": parsed.get("slots", []),
-                        "all_slots": parsed.get("all_slots", []),
-                        "detected_subjects": parsed.get("detected_subjects", []),
-                        "total": parsed.get("total_extracted", len(parsed.get("slots", []))),
-                        "filter_matched": parsed.get("filter_matched", True),
-                        "raw_text": parsed.get("raw_text", "")[:3000],
-                        "subject_filter": subject_filter,
-                    }
-                )
-            except Exception as e:
-                logger.exception("Image timetable OCR failed")
-                return JsonResponse(
-                    {"status": "error", "message": f"Image recognition failed: {e}"},
-                    status=400,
-                )
-        elif any(filename.endswith(ext) for ext in [".txt", ".csv", ".tsv"]):
-            try:
-                extracted = uploaded_file.read().decode("utf-8", errors="ignore")
-                raw_text = f"{raw_text}\n{extracted}".strip() if raw_text else extracted
-            except Exception as e:
-                return JsonResponse({"status": "error", "message": f"Could not read text file: {e}"}, status=400)
+        try:
+            parsed = parse_timetable_file(
+                uploaded_file,
+                filename=uploaded_file.name,
+                subject_filter=subject_filter,
+                register_subject=register.subject_code,
+                term_start=register.term_start,
+                term_end=register.term_end,
+            )
+            return JsonResponse(
+                {
+                    "status": "ok",
+                    "slots": parsed.get("slots", []),
+                    "all_slots": parsed.get("all_slots", []),
+                    "detected_subjects": parsed.get("detected_subjects", []),
+                    "needs_information": parsed.get("needs_information", []),
+                    "metadata": parsed.get("metadata", {}),
+                    "total": parsed.get("total_extracted", len(parsed.get("slots", []))),
+                    "filter_matched": parsed.get("filter_matched", True),
+                    "raw_text": parsed.get("raw_text", "")[:3000],
+                    "subject_filter": subject_filter,
+                }
+            )
+        except Exception as e:
+            logger.exception("Timetable document parsing failed")
+            return JsonResponse(
+                {"status": "error", "message": f"Document recognition failed: {e}"},
+                status=400,
+            )
 
     if not raw_text:
         return JsonResponse(
@@ -681,10 +671,12 @@ def parse_timetable_upload(request, register_id):
         {
             "status": "ok",
             "slots": parsed.get("slots", []),
-            "all_slots": parsed.get("slots", []),
-            "detected_subjects": [],
+            "all_slots": parsed.get("all_slots", parsed.get("slots", [])),
+            "detected_subjects": parsed.get("detected_subjects", []),
+            "needs_information": parsed.get("needs_information", []),
+            "metadata": parsed.get("metadata", {}),
             "total": parsed.get("total_extracted", len(parsed.get("slots", []))),
-            "filter_matched": True,
+            "filter_matched": parsed.get("filter_matched", True),
             "raw_text": raw_text[:3000],
             "subject_filter": subject_filter,
         }

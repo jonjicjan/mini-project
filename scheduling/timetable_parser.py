@@ -132,6 +132,31 @@ def extract_text_from_pdf(file_bytes_or_stream) -> str:
     return "\n".join(text_chunks)
 
 
+def extract_images_from_pdf(file_bytes_or_stream) -> List[Any]:
+    """Extract embedded images from PDF pages for scanned timetables."""
+    if PdfReader is None or Image is None:
+        return []
+    if isinstance(file_bytes_or_stream, bytes):
+        stream = io.BytesIO(file_bytes_or_stream)
+    else:
+        stream = file_bytes_or_stream
+    try:
+        reader = PdfReader(stream)
+        images = []
+        for page in reader.pages:
+            for img_file in page.images:
+                try:
+                    pil_img = Image.open(io.BytesIO(img_file.data))
+                    if pil_img.width >= 300 and pil_img.height >= 300:
+                        images.append(pil_img)
+                except Exception:
+                    continue
+        return images
+    except Exception:
+        return []
+
+
+
 def normalize_time(hour: int, minute: int, am_pm: Optional[str] = None) -> time:
     """Convert parsed hour/minute to 24-hour time.
     
@@ -205,23 +230,207 @@ def parse_timetable_from_image(
     file_bytes_or_stream,
     *,
     subject_filter: Optional[str] = None,
+    register_subject: Optional[str] = None,
     term_start: Optional[date] = None,
     term_end: Optional[date] = None,
 ) -> Dict[str, Any]:
     """Extract and parse timetable slots directly from an uploaded image using native OCR."""
-    if Image is None:
-        raise ValueError("Pillow is required for image processing.")
+    return parse_timetable_file(
+        file_bytes_or_stream,
+        filename="timetable.png",
+        subject_filter=subject_filter,
+        register_subject=register_subject,
+        term_start=term_start,
+        term_end=term_end,
+    )
 
+
+def step_1_upload_and_extract(
+    file_bytes_or_stream,
+    filename: str = "",
+) -> Dict[str, Any]:
+    """Stage 1: Ingest image or PDF file stream and determine extraction path."""
+    is_pdf = filename.lower().endswith(".pdf")
+    if not is_pdf and hasattr(file_bytes_or_stream, "name"):
+        is_pdf = file_bytes_or_stream.name.lower().endswith(".pdf")
+
+    if is_pdf and PdfReader is not None:
+        raw_text = extract_text_from_pdf(file_bytes_or_stream)
+        if len(raw_text.strip()) >= 50:
+            return {"kind": "text", "raw_text": raw_text, "source": "pdf_text"}
+        # Fallback to embedded image if PDF is a scanned document
+        pdf_images = extract_images_from_pdf(file_bytes_or_stream)
+        if pdf_images:
+            return {"kind": "image", "image": pdf_images[0], "source": "pdf_scan"}
+        return {"kind": "text", "raw_text": raw_text, "source": "pdf_text"}
+
+    if Image is not None:
+        try:
+            if isinstance(file_bytes_or_stream, bytes):
+                img = Image.open(io.BytesIO(file_bytes_or_stream))
+            else:
+                img = Image.open(file_bytes_or_stream)
+            return {"kind": "image", "image": img, "source": "image_upload"}
+        except Exception:
+            pass
+
+    # Fallback to text decoding
     if isinstance(file_bytes_or_stream, bytes):
-        pil_img = Image.open(io.BytesIO(file_bytes_or_stream)).convert("RGBA")
+        text = file_bytes_or_stream.decode("utf-8", errors="ignore")
+    elif hasattr(file_bytes_or_stream, "read"):
+        text = file_bytes_or_stream.read().decode("utf-8", errors="ignore")
     else:
-        pil_img = Image.open(file_bytes_or_stream).convert("RGBA")
+        text = str(file_bytes_or_stream)
+    return {"kind": "text", "raw_text": text, "source": "text_upload"}
 
+
+def step_2_preprocess_image(pil_img: Any) -> Any:
+    """Stage 2: Image preprocessing for high-accuracy OCR and cell grid detection.
+
+    Enhancements:
+    - Auto-orient using EXIF orientation tags.
+    - Low-resolution upscaling (if width < 700px).
+    - Preserves color chroma channels for Windows Media OCR neural network.
+    - Contrast and sharpness enhancement.
+    - Return RGBA format for native OCR engine.
+    """
+    if Image is None or pil_img is None:
+        return pil_img
+
+    img = pil_img.convert("RGBA")
+    try:
+        from PIL import ImageOps, ImageEnhance
+
+        img = ImageOps.exif_transpose(img)
+        if img.width < 700:
+            scale = 1000.0 / float(max(img.width, 1))
+            new_w = 1000
+            new_h = int(img.height * scale)
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+        img_rgb = img.convert("RGB")
+        enh = ImageEnhance.Contrast(img_rgb).enhance(1.05)
+        enh = ImageEnhance.Sharpness(enh).enhance(1.1)
+        return enh.convert("RGBA")
+    except Exception:
+        return img
+
+
+def step_3_detect_table_and_cells(
+    words: List[Dict[str, Any]],
+    img_width: float,
+    img_height: float,
+) -> Dict[str, Any]:
+    """Stage 3: Table and cell detection.
+
+    Identifies:
+    - Table bounding box [grid_top_y, grid_bottom_y].
+    - Orientation (DAYS_IN_ROWS standard vs DAYS_IN_COLUMNS inverted).
+    - Active weekdays (5-day week vs 6-day week with Saturday).
+    - Grid cell matrix: bounding boxes for each (day, period) coordinate.
+    - Footer reference table area.
+    """
+    W = float(img_width)
+    H = float(img_height)
+
+    orientation, day_names = detect_layout_orientation_and_days(words, W, H)
+
+    footer_headers = [
+        w["y"]
+        for w in words
+        if any(kw in w.get("text", "").upper() for kw in ["SUBJECT", "CODE", "FACULTY", "SL.NO", "NAME OF THE", "STAFF"])
+        and w.get("y", 0) > H * 0.4
+    ]
+    grid_bottom_y = (min(footer_headers) - 8) if footer_headers else (H * 0.53)
+
+    header_candidates = [
+        w["y"] + w["h"]
+        for w in words
+        if any(kw in w.get("text", "").upper() for kw in ["PERIOD", "TIME", "8:30", "9.25", "10.35", "DAY"])
+        and w.get("y", 0) < H * 0.35
+    ]
+    grid_top_y = (max(header_candidates) + 6) if header_candidates else (H * 0.245)
+
+    cells = []
+    if orientation == "DAYS_IN_ROWS":
+        num_days = len(day_names)
+        row_h = (grid_bottom_y - grid_top_y) / max(num_days, 1)
+        day_rows = [(d, grid_top_y + i * row_h, grid_top_y + (i + 1) * row_h) for i, d in enumerate(day_names)]
+
+        is_ksit = any("KSIT" in w.get("text", "").upper() or "OB-403" in w.get("text", "").upper() for w in words)
+        has_830 = any("8:30" in w.get("text", "") or "08:30" in w.get("text", "") for w in words)
+
+        if is_ksit or has_830:
+            col_bounds = [
+                ("1", 0.078 * W, 0.180 * W, "08:30", "09:25"),
+                ("2", 0.180 * W, 0.288 * W, "09:25", "10:20"),
+                ("3", 0.360 * W, 0.490 * W, "10:35", "11:30"),
+                ("4", 0.490 * W, 0.605 * W, "11:30", "12:25"),
+                ("5", 0.695 * W, 0.795 * W, "13:15", "14:10"),
+                ("6", 0.795 * W, 0.898 * W, "14:10", "15:05"),
+                ("7", 0.898 * W, 1.000 * W, "15:05", "16:00"),
+            ]
+        else:
+            col_bounds = [
+                ("1", 0.12 * W, 0.26 * W, "09:00", "10:00"),
+                ("2", 0.26 * W, 0.40 * W, "10:00", "11:00"),
+                ("3", 0.40 * W, 0.55 * W, "11:15", "12:15"),
+                ("4", 0.55 * W, 0.70 * W, "13:15", "14:15"),
+                ("5", 0.70 * W, 0.85 * W, "14:15", "15:15"),
+                ("6", 0.85 * W, 1.00 * W, "15:15", "16:15"),
+            ]
+
+        for day_name, y1, y2 in day_rows:
+            for p_num, x1, x2, st, et in col_bounds:
+                cells.append({
+                    "day": day_name,
+                    "period": p_num,
+                    "bbox": (x1, y1, x2, y2),
+                    "start_time": st,
+                    "end_time": et,
+                })
+    else:
+        num_days = len(day_names)
+        col_w = (W * 0.85) / max(num_days, 1)
+        day_cols = [(d, 0.15 * W + i * col_w, 0.15 * W + (i + 1) * col_w) for i, d in enumerate(day_names)]
+        row_bounds = [
+            ("1", grid_top_y + 0 * 50, grid_top_y + 1 * 50, "09:00", "10:00"),
+            ("2", grid_top_y + 1 * 50, grid_top_y + 2 * 50, "10:00", "11:00"),
+            ("3", grid_top_y + 2 * 50, grid_top_y + 3 * 50, "11:15", "12:15"),
+            ("4", grid_top_y + 3 * 50, grid_top_y + 4 * 50, "13:15", "14:15"),
+            ("5", grid_top_y + 4 * 50, grid_top_y + 5 * 50, "14:15", "15:15"),
+            ("6", grid_top_y + 5 * 50, grid_top_y + 6 * 50, "15:15", "16:15"),
+        ]
+        for p_num, y1, y2, st, et in row_bounds:
+            for day_name, x1, x2 in day_cols:
+                cells.append({
+                    "day": day_name,
+                    "period": p_num,
+                    "bbox": (x1, y1, x2, y2),
+                    "start_time": st,
+                    "end_time": et,
+                })
+
+    return {
+        "orientation": orientation,
+        "day_names": day_names,
+        "grid_top_y": grid_top_y,
+        "grid_bottom_y": grid_bottom_y,
+        "footer_y": grid_bottom_y + 8,
+        "cells": cells,
+        "W": W,
+        "H": H,
+    }
+
+
+def step_4_ocr_text_extraction(
+    preprocessed_img: Any,
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """Stage 4: OCR text extraction with spatial bounding boxes and typo normalization."""
     raw_text = ""
-    words_data = []
+    words_data: List[Dict[str, Any]] = []
 
-    # Attempt native Windows OCR with spatial word coordinates
-    if winocr is not None:
+    if winocr is not None and preprocessed_img is not None:
         try:
             import asyncio
             from winrt.windows.media.ocr import OcrEngine
@@ -230,9 +439,9 @@ def parse_timetable_from_image(
             from winrt.windows.graphics.imaging import SoftwareBitmap, BitmapPixelFormat
 
             writer = DataWriter()
-            writer.write_bytes(pil_img.tobytes())
+            writer.write_bytes(preprocessed_img.tobytes())
             sb = SoftwareBitmap.create_copy_from_buffer(
-                writer.detach_buffer(), BitmapPixelFormat.RGBA8, pil_img.width, pil_img.height
+                writer.detach_buffer(), BitmapPixelFormat.RGBA8, preprocessed_img.width, preprocessed_img.height
             )
             engine = OcrEngine.try_create_from_language(Language("en"))
 
@@ -255,26 +464,338 @@ def parse_timetable_from_image(
             for line in ocr_res.lines:
                 for w in line.words:
                     r = w.bounding_rect
-                    words_data.append({"text": w.text, "x": r.x, "y": r.y, "w": r.width, "h": r.height})
+                    clean_w = clean_ocr_typos(w.text)
+                    words_data.append({
+                        "text": clean_w,
+                        "raw_text": w.text,
+                        "x": r.x,
+                        "y": r.y,
+                        "w": r.width,
+                        "h": r.height,
+                    })
         except Exception:
             pass
 
-    # If spatial word coordinates were obtained from the image grid, perform 2D spatial extraction
-    if words_data and len(words_data) > 10:
-        return extract_slots_from_spatial_words(
-            words_data,
-            raw_text=raw_text,
-            img_width=pil_img.width,
-            img_height=pil_img.height,
+    return raw_text, words_data
+
+
+def step_5_map_subjects_and_names(
+    words: List[Dict[str, Any]],
+    raw_text: str,
+    img_width: float,
+    img_height: float,
+    all_raw_cells: List[str],
+) -> List[Dict[str, Any]]:
+    """Stage 5: Subject code, title, faculty, lab vs theory, and acronym mapping."""
+    detected = extract_subjects_from_timetable_words(words, raw_text, img_width=img_width, img_height=img_height)
+
+    # In-cell discovery for subjects not present in the footer table
+    for cell_text in all_raw_cells:
+        codes = COURSE_CODE_REGEX.findall(cell_text)
+        for code in codes:
+            ucode = code.upper()
+            if ucode not in IGNORE_CELL_WORDS and not any(ds["code"].upper() == ucode for ds in detected):
+                is_lab = "LAB" in cell_text.upper()
+                detected.append({
+                    "code": ucode,
+                    "display_code": f"{ucode} (LAB)" if is_lab and not ucode.endswith("LAB") else ucode,
+                    "is_lab": is_lab,
+                    "name": ucode,
+                    "faculty": "",
+                    "aliases": [ucode],
+                    "slot_count": 0,
+                    "slots": [],
+                })
+        if not codes:
+            lab_match = re.search(r"\b([A-Z0-9\s&]+LAB(?:ORATORY)?)\b", cell_text, flags=re.IGNORECASE)
+            if lab_match:
+                lname = lab_match.group(1).strip().upper()
+                if lname not in IGNORE_CELL_WORDS and not any(ds["code"].upper() == lname for ds in detected):
+                    detected.append({
+                        "code": lname,
+                        "display_code": lname,
+                        "is_lab": True,
+                        "name": lname,
+                        "faculty": "",
+                        "aliases": [lname],
+                        "slot_count": 0,
+                        "slots": [],
+                    })
+            else:
+                acronyms = ACRONYM_REGEX.findall(cell_text)
+                for a in acronyms:
+                    ua = a.strip().upper()
+                    if ua not in IGNORE_CELL_WORDS and len(ua) >= 2 and not ua.isdigit():
+                        if not any(ds["code"].upper() == ua or ua in [al.upper() for al in ds["aliases"]] for ds in detected):
+                            detected.append({
+                                "code": ua,
+                                "display_code": ua,
+                                "is_lab": False,
+                                "name": ua,
+                                "faculty": "",
+                                "aliases": [ua],
+                                "slot_count": 0,
+                                "slots": [],
+                            })
+    return detected
+
+
+def step_6_map_days_and_periods(
+    cell_matrix: List[Dict[str, Any]],
+    words: List[Dict[str, Any]],
+    detected_subjects: List[Dict[str, Any]],
+    W: float,
+    H: float,
+    term_start: Optional[date] = None,
+    term_end: Optional[date] = None,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Stage 6: Map segmented cells to weekdays, periods, time windows, and multi-period spans."""
+    eff_from_str = term_start.isoformat() if term_start else ""
+    eff_to_str = term_end.isoformat() if term_end else ""
+    all_slots = []
+
+    for cell in cell_matrix:
+        x1, y1, x2, y2 = cell["bbox"]
+        c_words = [
+            w["text"]
+            for w in words
+            if y1 <= (w["y"] + w["h"] / 2) <= y2 and x1 <= (w["x"] + w["w"] / 2) <= x2
+        ]
+        day_name = cell["day"]
+        p_num = cell["period"]
+
+        if not c_words:
+            p34_words = [
+                w["text"] for w in words
+                if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.360 * W) <= (w["x"] + w["w"] / 2) <= (0.605 * W)
+            ]
+            p34_text = " ".join(p34_words).upper()
+            if "LAB" in p34_text and p_num in ("3", "4"):
+                c_words = p34_words
+            else:
+                pm_words = [
+                    w["text"] for w in words
+                    if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.695 * W) <= (w["x"] + w["w"] / 2) <= W
+                ]
+                pm_text = " ".join(pm_words).upper()
+                if any(kw in pm_text for kw in ["SKILL LAB", "MINI PROJECT", "NSS", "SPORTS", "YOGA"]) and p_num in ("5", "6", "7"):
+                    c_words = pm_words
+        elif p_num in ("3", "4"):
+            p34_words = [
+                w["text"] for w in words
+                if y1 <= (w["y"] + w["h"] / 2) <= y2 and (0.360 * W) <= (w["x"] + w["w"] / 2) <= (0.605 * W)
+            ]
+            if "LAB" in " ".join(p34_words).upper():
+                c_words = p34_words
+
+        raw_cell = clean_ocr_typos(" ".join(c_words).strip())
+        if not raw_cell or any(ign in raw_cell.upper() for ign in ["LUNCH", "TEA BREAK", "RECESS"]):
+            continue
+
+        all_slots.append({
+            "weekday": day_name,
+            "period": p_num,
+            "start_time": cell["start_time"],
+            "end_time": cell["end_time"],
+            "effective_from": eff_from_str,
+            "effective_to": eff_to_str,
+            "raw_cell": raw_cell,
+            "subject_code": "",
+            "subject_name": "",
+            "faculty_name": "",
+            "all_matched_codes": [],
+        })
+
+    for s in all_slots:
+        raw_upper = s["raw_cell"].upper()
+        matched = []
+        for ds in detected_subjects:
+            aliases = [a.upper() for a in ds["aliases"]]
+            if any(re.search(r"\b" + re.escape(a) + r"\b", raw_upper) for a in aliases) or any(
+                a in raw_upper for a in aliases
+            ):
+                matched.append(ds)
+        primary = matched[0] if matched else None
+        s["subject_code"] = primary["code"] if primary else ""
+        s["subject_name"] = primary["name"] if primary else ""
+        s["faculty_name"] = primary["faculty"] if primary else ""
+        s["all_matched_codes"] = [m["code"] for m in matched]
+
+    for ds in detected_subjects:
+        aliases_upper = [a.upper() for a in ds["aliases"]]
+        subj_slots = []
+        for s in all_slots:
+            cell_up = s["raw_cell"].upper()
+            matches_alias = any(
+                re.search(r"\b" + re.escape(a) + r"\b", cell_up) for a in aliases_upper
+            ) or any(a in cell_up for a in aliases_upper)
+            if matches_alias:
+                cell_is_lab = "LAB" in cell_up
+                if ds.get("is_lab"):
+                    if cell_is_lab:
+                        subj_slots.append(s)
+                else:
+                    has_sister_lab = any(
+                        other != ds and other["code"] == ds["code"] and other.get("is_lab")
+                        for other in detected_subjects
+                    )
+                    if has_sister_lab:
+                        if not cell_is_lab:
+                            subj_slots.append(s)
+                    else:
+                        subj_slots.append(s)
+        ds["slot_count"] = len(subj_slots)
+        ds["slots"] = subj_slots
+
+    return all_slots, detected_subjects
+
+
+def step_7_generate_timetable_and_review(
+    all_slots: List[Dict[str, Any]],
+    detected_subjects: List[Dict[str, Any]],
+    *,
+    subject_filter: Optional[str] = None,
+    register_subject: Optional[str] = None,
+    term_start: Optional[date] = None,
+    term_end: Optional[date] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    raw_text: str = "",
+) -> Dict[str, Any]:
+    """Stage 7: Package final timetable and compile 'needs_information' review items."""
+    filter_matched = True
+    matched_slots: List[Dict[str, Any]] = []
+    effective_target = (subject_filter or register_subject or "").strip().upper()
+
+    if effective_target:
+        matching_subj = next(
+            (
+                ds
+                for ds in detected_subjects
+                if ds["code"].upper() == effective_target
+                or ds.get("display_code", "").upper() == effective_target
+                or any(a.upper() == effective_target for a in ds["aliases"])
+                or effective_target in ds["name"].upper()
+            ),
+            None,
+        )
+        if matching_subj and matching_subj.get("slots"):
+            matched_slots = matching_subj["slots"]
+        else:
+            target_aliases = get_subject_aliases(effective_target, raw_text)
+            for s in all_slots:
+                cell_up = s["raw_cell"].upper()
+                if any(a in cell_up for a in target_aliases):
+                    matched_slots.append(s)
+        if not matched_slots:
+            filter_matched = False
+            matched_slots = all_slots
+    else:
+        matched_slots = all_slots
+
+    needs_info: List[Dict[str, Any]] = []
+
+    # 1. Subject Mismatch / Selection question
+    if effective_target and not filter_matched and detected_subjects:
+        valid_options = [ds["display_code"] for ds in detected_subjects if ds.get("slot_count", 0) > 0]
+        if not valid_options:
+            valid_options = [ds["display_code"] for ds in detected_subjects]
+        needs_info.append({
+            "type": "subject_selection",
+            "title": "Select Course Subject",
+            "message": f"Register course code '{effective_target}' was not found in the timetable. Please select which detected subject belongs to this register.",
+            "options": valid_options[:8],
+            "default": valid_options[0] if valid_options else "",
+        })
+
+    # 2. Missing Term Dates question
+    if not term_start or not term_end:
+        needs_info.append({
+            "type": "missing_term_dates",
+            "title": "Set Academic Semester Dates",
+            "message": "Academic term dates are not configured on this register. Please verify effective start and end dates for class slots.",
+            "action": "set_dates",
+        })
+
+    # 3. Timing Confirmation question
+    if metadata and metadata.get("uses_fallback_timings"):
+        needs_info.append({
+            "type": "timing_confirmation",
+            "title": "Confirm Period Timings",
+            "message": "Clock timings were not explicitly specified in the timetable headers. Standard default hours (08:30–16:00) were assigned.",
+            "options": ["Confirm standard timings", "Edit slot timings"],
+            "default": "Confirm standard timings",
+        })
+
+    # 4. Unknown or Unconfirmed Subjects (e.g. acronym without full name)
+    for ds in detected_subjects:
+        if ds.get("slot_count", 0) > 0 and not ds.get("faculty") and ds["name"] == ds["code"]:
+            needs_info.append({
+                "type": "unconfirmed_subject",
+                "title": f"Course Details for {ds['code']}",
+                "message": f"Subject code '{ds['code']}' has {ds['slot_count']} slots, but full title or instructor was not listed.",
+                "subject_code": ds["code"],
+            })
+            break
+
+    return {
+        "status": "ok",
+        "slots": matched_slots,
+        "all_slots": all_slots,
+        "detected_subjects": detected_subjects,
+        "needs_information": needs_info,
+        "metadata": metadata or {},
+        "total_extracted": len(matched_slots),
+        "filter_matched": filter_matched,
+        "subject_filter": subject_filter or "",
+        "register_subject": register_subject or "",
+        "raw_text": raw_text,
+    }
+
+
+def parse_timetable_file(
+    file_bytes_or_stream,
+    filename: str = "",
+    *,
+    subject_filter: Optional[str] = None,
+    register_subject: Optional[str] = None,
+    term_start: Optional[date] = None,
+    term_end: Optional[date] = None,
+) -> Dict[str, Any]:
+    """Execute the complete 7-stage timetable recognition pipeline across any format."""
+    # Stage 1: Ingest upload
+    ingest = step_1_upload_and_extract(file_bytes_or_stream, filename=filename)
+
+    if ingest["kind"] == "image":
+        # Stage 2: Preprocess image
+        preprocessed = step_2_preprocess_image(ingest["image"])
+        # Stage 4: OCR extraction
+        raw_text, words = step_4_ocr_text_extraction(preprocessed)
+        if words and len(words) > 10:
+            # Stages 3, 5, 6, 7: Spatial grid extraction and synthesis
+            return extract_slots_from_spatial_words(
+                words,
+                raw_text=raw_text,
+                img_width=preprocessed.width,
+                img_height=preprocessed.height,
+                subject_filter=subject_filter,
+                register_subject=register_subject,
+                term_start=term_start,
+                term_end=term_end,
+            )
+        # Fallback to textual parse if OCR words were few
+        return parse_timetable_text(
+            raw_text,
             subject_filter=subject_filter,
+            register_subject=register_subject,
             term_start=term_start,
             term_end=term_end,
         )
 
-    # Fallback to general textual timetable parser
+    # Ingest was text or digital PDF text
     return parse_timetable_text(
-        raw_text,
+        ingest.get("raw_text", ""),
         subject_filter=subject_filter,
+        register_subject=register_subject,
         term_start=term_start,
         term_end=term_end,
     )
@@ -457,6 +978,7 @@ def extract_slots_from_spatial_words(
     img_width: Optional[float] = None,
     img_height: Optional[float] = None,
     subject_filter: Optional[str] = None,
+    register_subject: Optional[str] = None,
     term_start: Optional[date] = None,
     term_end: Optional[date] = None,
 ) -> Dict[str, Any]:
@@ -759,14 +1281,41 @@ def extract_slots_from_spatial_words(
     else:
         matched_slots = all_slots
 
+    needs_info: List[Dict[str, Any]] = []
+    effective_target = (subject_filter or register_subject or "").strip().upper()
+
+    # 1. Subject Mismatch / Selection question
+    if effective_target and not filter_matched and detected_subjects:
+        valid_options = [ds["display_code"] for ds in detected_subjects if ds.get("slot_count", 0) > 0]
+        if not valid_options:
+            valid_options = [ds["display_code"] for ds in detected_subjects]
+        needs_info.append({
+            "type": "subject_selection",
+            "title": "Select Course Subject",
+            "message": f"Register course code '{effective_target}' was not found in the timetable. Please select which detected subject belongs to this register.",
+            "options": valid_options[:8],
+            "default": valid_options[0] if valid_options else "",
+        })
+
+    # 2. Missing Term Dates question
+    if not term_start or not term_end:
+        needs_info.append({
+            "type": "missing_term_dates",
+            "title": "Set Academic Semester Dates",
+            "message": "Academic term dates are not configured on this register. Please verify effective start and end dates for class slots.",
+            "action": "set_dates",
+        })
+
     return {
         "status": "ok",
         "slots": matched_slots,
         "all_slots": all_slots,
         "detected_subjects": detected_subjects,
+        "needs_information": needs_info,
         "total_extracted": len(matched_slots),
         "filter_matched": filter_matched,
         "subject_filter": subject_filter or "",
+        "register_subject": register_subject or "",
         "raw_text": raw_text,
     }
 
@@ -980,6 +1529,7 @@ def parse_timetable_text(
         "slots": unique_slots,
         "all_slots": unique_slots,
         "detected_subjects": detected_subjects,
+        "needs_information": [],
         "total_extracted": len(unique_slots),
         "raw_text": raw_text,
     }

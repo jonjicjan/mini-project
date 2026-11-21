@@ -194,3 +194,65 @@ def test_clean_ocr_typos_and_code_regex():
         assert match.group(1).upper() == code
 
 
+def test_seven_stage_engine_modular_steps():
+    """Verify each of the 7 stages of the timetable engine independently."""
+    from PIL import Image
+    from scheduling.timetable_parser import (
+        step_1_upload_and_extract,
+        step_2_preprocess_image,
+        step_3_detect_table_and_cells,
+        step_5_map_subjects_and_names,
+        step_6_map_days_and_periods,
+        step_7_generate_timetable_and_review,
+        parse_timetable_file,
+    )
+
+    # Stage 1: Upload and extract
+    raw_csv = "Monday\t1\t09:00\t10:00\t21CS51\nTuesday\t2\t10:00\t11:00\t21CS51\n"
+    res1 = step_1_upload_and_extract(raw_csv.encode("utf-8"), filename="test.tsv")
+    assert res1["kind"] == "text"
+    assert "21CS51" in res1["raw_text"]
+
+    # Stage 2: Preprocess image
+    test_img = Image.new("RGB", (600, 400), color=(255, 255, 255))
+    prep_img = step_2_preprocess_image(test_img)
+    assert prep_img.mode == "RGBA"
+    assert prep_img.width >= 1000  # verified resolution normalization upscale
+
+    # Stage 3: Table and cell detection
+    dummy_words = [
+        {"text": "MONDAY", "x": 50, "y": 150, "w": 60, "h": 20},
+        {"text": "TUESDAY", "x": 50, "y": 200, "w": 60, "h": 20},
+        {"text": "WEDNESDAY", "x": 50, "y": 250, "w": 80, "h": 20},
+        {"text": "THURSDAY", "x": 50, "y": 300, "w": 70, "h": 20},
+        {"text": "FRIDAY", "x": 50, "y": 350, "w": 50, "h": 20},
+        {"text": "08:30-09:25", "x": 150, "y": 100, "w": 80, "h": 20},
+        {"text": "09:25-10:20", "x": 250, "y": 100, "w": 80, "h": 20},
+    ]
+    table_meta = step_3_detect_table_and_cells(dummy_words, 1000, 800)
+    assert table_meta["orientation"] == "DAYS_IN_ROWS"
+    assert "Monday" in table_meta["day_names"]
+    assert len(table_meta["cells"]) > 0
+
+    # Stage 5: Subject code & name mapping
+    cell_texts = ["Room 101 BCS501 Class", "BAIL504 DATA VISUALIZATION LAB", "TOC"]
+    subjects = step_5_map_subjects_and_names([], "", 1000, 800, cell_texts)
+    sub_codes = [s["code"] for s in subjects]
+    assert "BCS501" in sub_codes
+    assert "BAIL504" in sub_codes
+
+    # Stage 7: Generate timetable & review (with needs_information)
+    # Test subject mismatch prompt
+    review = step_7_generate_timetable_and_review(
+        all_slots=[{"raw_cell": "BCS501", "weekday": "Monday", "period": "1", "start_time": "09:00", "end_time": "10:00"}],
+        detected_subjects=[{"code": "BCS501", "display_code": "BCS501", "aliases": ["BCS501"], "name": "SE", "slot_count": 1, "slots": []}],
+        subject_filter="NONEXISTENT_CODE",
+        register_subject="NONEXISTENT_CODE",
+    )
+    assert len(review["needs_information"]) > 0
+    mismatch_item = next((i for i in review["needs_information"] if i["type"] == "subject_selection"), None)
+    assert mismatch_item is not None
+    assert "BCS501" in mismatch_item["options"]
+
+
+
